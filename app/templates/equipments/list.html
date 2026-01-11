@@ -1,0 +1,572 @@
+{% extends "base.html" %}
+{% block title %}Equipamentos — Inventário{% endblock %}
+{% block content %}
+
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+  <h1 style="margin:0;">Equipamentos</h1>
+
+  <!-- ✅ Botões do topo -->
+  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+    <button class="btn btn-orange" type="button" onclick="openModal('modalEquipmentNew')">
+      + Novo Equipamento
+    </button>
+
+    <button class="btn btn-orange" type="button" onclick="openScanModalForCreate()">
+      + Cadastro por câmera
+    </button>
+  </div>
+</div>
+
+<form method="get" class="card" style="padding:12px;margin-top:12px;display:grid;gap:10px;">
+  <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;">
+    <div>
+      <label class="muted small">Pesquisar</label>
+      <input class="input" name="q" value="{{ q }}" placeholder="Nome, marca, NF ou PAT/código">
+    </div>
+    <div>
+      <label class="muted small">Localização</label>
+      <select name="location_id">
+        <option value="">Todas</option>
+        {% for loc in locations %}
+          <option value="{{ loc.id }}" {% if location_id|int == loc.id %}selected{% endif %}>{{ loc.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="muted small">Setor</label>
+      <select name="sector_id">
+        <option value="">Todos</option>
+        {% for s in sectors %}
+          <option value="{{ s.id }}" {% if sector_id|int == s.id %}selected{% endif %}>{{ s.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:10px;flex-wrap:wrap;">
+    <button class="btn" type="submit">Filtrar</button>
+    <a class="btn" href="{{ url_for('main.equipments_list') }}">Limpar</a>
+  </div>
+</form>
+
+<div class="card" style="padding:0;margin-top:12px;overflow:hidden;">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Equipamento</th>
+        <th>Localização</th>
+        <th>Setor</th>
+        <th class="muted">PAT/Código</th>
+        <th class="muted">NF</th>
+        <th class="muted">Valor</th>
+        <th style="width:190px;">Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if equipments %}
+        {% for e in equipments %}
+        <tr>
+          <td>
+            <b>{{ e.name }}</b><br>
+            <span class="muted small">{{ e.brand or '-' }}</span>
+          </td>
+          <td>{{ e.location.name }}</td>
+          <td>{{ e.sector.name }}</td>
+          <td class="muted">{{ e.barcode_pat }}</td>
+          <td class="muted">{{ e.invoice_nf or '-' }}</td>
+          <td class="muted">
+            {% if e.value is not none %}
+              R$ {{ "%.2f"|format(e.value) }}
+            {% else %}
+              -
+            {% endif %}
+          </td>
+          <td>
+            <button
+              class="btn"
+              type="button"
+              onclick="openEditEquipment(this)"
+              data-id="{{ e.id }}"
+              data-name="{{ e.name|e }}"
+              data-brand="{{ (e.brand or '')|e }}"
+              data-value="{{ e.value if e.value is not none else '' }}"
+              data-invoice_nf="{{ (e.invoice_nf or '')|e }}"
+              data-barcode_pat="{{ e.barcode_pat|e }}"
+              data-location_id="{{ e.location_id }}"
+              data-sector_id="{{ e.sector_id }}"
+            >
+              Editar
+            </button>
+
+            <button
+              class="btn btn-danger"
+              type="button"
+              onclick="openDeleteModal('{{ url_for('main.equipments_delete', equipment_id=e.id) }}', '{{ e.name|e }}', '{{ e.barcode_pat|e }}')"
+            >
+              Excluir
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      {% else %}
+        <tr><td colspan="7" class="muted">Nenhum equipamento encontrado.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
+<!-- ======================================================
+     MODAL: NOVO EQUIPAMENTO
+====================================================== -->
+<div id="modalEquipmentNew" class="modal-backdrop" aria-hidden="true">
+  <div class="modal card" role="dialog" aria-modal="true" aria-labelledby="modalEquipmentNewTitle">
+    <div class="modal-header">
+      <div>
+        <div id="modalEquipmentNewTitle" style="font-weight:900;font-size:1.1rem;">Novo Equipamento</div>
+        <div class="muted small">Preencha os campos e salve.</div>
+      </div>
+      <button class="btn" type="button" onclick="closeModal('modalEquipmentNew')">Fechar</button>
+    </div>
+
+    <form method="post" action="{{ url_for('main.equipments_create') }}" class="modal-body">
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;">
+        <div>
+          <label class="muted small">Nome *</label>
+          <input class="input" name="name" placeholder="Ex.: Mesa de Som" required>
+        </div>
+        <div>
+          <label class="muted small">Marca</label>
+          <input class="input" name="brand" placeholder="Ex.: Yamaha">
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+        <div>
+          <label class="muted small">Valor (R$)</label>
+          <input class="input" name="value" placeholder="Ex.: 1500,00">
+        </div>
+        <div>
+          <label class="muted small">NF</label>
+          <input class="input" name="invoice_nf" placeholder="Número da nota">
+        </div>
+        <div>
+          <label class="muted small">PAT / Código de barras *</label>
+          <!-- ✅ ID para preencher via câmera -->
+          <input id="new_barcode_pat" class="input" name="barcode_pat" placeholder="Ex.: 7890001234567" required>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label class="muted small">Localização/Igreja *</label>
+          <select name="location_id" required>
+            <option value="" disabled selected>Selecione...</option>
+            {% for loc in locations %}
+              <option value="{{ loc.id }}">{{ loc.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="muted small">Setor *</label>
+          <select name="sector_id" required>
+            <option value="" disabled selected>Selecione...</option>
+            {% for s in sectors %}
+              <option value="{{ s.id }}">{{ s.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-orange" type="submit">Salvar</button>
+        <button class="btn" type="button" onclick="closeModal('modalEquipmentNew')">Cancelar</button>
+      </div>
+
+      <p class="muted small" style="margin:0;">
+        * PAT/Código é único. Se repetir, o sistema bloqueia.
+      </p>
+    </form>
+  </div>
+</div>
+
+<!-- ======================================================
+     MODAL: EDITAR EQUIPAMENTO
+====================================================== -->
+<div id="modalEquipmentEdit" class="modal-backdrop" aria-hidden="true">
+  <div class="modal card" role="dialog" aria-modal="true" aria-labelledby="modalEquipmentEditTitle">
+    <div class="modal-header">
+      <div>
+        <div id="modalEquipmentEditTitle" style="font-weight:900;font-size:1.1rem;">Editar Equipamento</div>
+        <div class="muted small">Altere os campos e salve.</div>
+      </div>
+      <button class="btn" type="button" onclick="closeModal('modalEquipmentEdit')">Fechar</button>
+    </div>
+
+    <form id="editEquipmentForm" method="post" class="modal-body" action="">
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;">
+        <div>
+          <label class="muted small">Nome *</label>
+          <input id="edit_name" class="input" name="name" required>
+        </div>
+        <div>
+          <label class="muted small">Marca</label>
+          <input id="edit_brand" class="input" name="brand">
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+        <div>
+          <label class="muted small">Valor (R$)</label>
+          <input id="edit_value" class="input" name="value" placeholder="Ex.: 1500,00">
+        </div>
+        <div>
+          <label class="muted small">NF</label>
+          <input id="edit_invoice_nf" class="input" name="invoice_nf">
+        </div>
+        <div>
+          <label class="muted small">PAT / Código de barras *</label>
+          <input id="edit_barcode_pat" class="input" name="barcode_pat" required>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label class="muted small">Localização/Igreja *</label>
+          <select id="edit_location_id" name="location_id" required>
+            {% for loc in locations %}
+              <option value="{{ loc.id }}">{{ loc.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="muted small">Setor *</label>
+          <select id="edit_sector_id" name="sector_id" required>
+            {% for s in sectors %}
+              <option value="{{ s.id }}">{{ s.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-orange" type="submit">Salvar alterações</button>
+        <button class="btn" type="button" onclick="closeModal('modalEquipmentEdit')">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ======================================================
+     MODAL: CONFIRMAR EXCLUSÃO (EXIGE DIGITAR "EXCLUIR")
+====================================================== -->
+<div id="modalDeleteConfirm" class="modal-backdrop" aria-hidden="true">
+  <div class="modal card" role="dialog" aria-modal="true" aria-labelledby="modalDeleteTitle">
+    <div class="modal-header">
+      <div>
+        <div id="modalDeleteTitle" style="font-weight:900;font-size:1.1rem;">Confirmar exclusão</div>
+        <div class="muted small">Digite <b>EXCLUIR</b> para liberar o botão.</div>
+      </div>
+      <button class="btn" type="button" onclick="closeModal('modalDeleteConfirm')">Fechar</button>
+    </div>
+
+    <form id="deleteEquipmentForm" method="post" class="modal-body" action="">
+      <div class="card" style="padding:12px;border-radius:16px;">
+        <div class="muted small">Equipamento</div>
+        <div style="font-weight:950;font-size:1.05rem;margin-top:6px;" id="deleteEquipmentName">-</div>
+        <div class="muted small" style="margin-top:6px;">
+          PAT/Código: <span id="deleteEquipmentPat" style="font-weight:800;"></span>
+        </div>
+      </div>
+
+      <div>
+        <label class="muted small">Digite EXCLUIR</label>
+        <input id="deleteConfirmInput" class="input" autocomplete="off" placeholder="EXCLUIR">
+        <div class="muted small" style="margin-top:6px;">
+          Isso evita exclusões acidentais.
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button id="deleteConfirmBtn" class="btn btn-orange" type="submit" disabled style="opacity:.55;cursor:not-allowed;">
+          Sim, excluir
+        </button>
+        <button class="btn" type="button" onclick="closeModal('modalDeleteConfirm')">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ======================================================
+     MODAL: SCAN PARA CADASTRO (NOVO)
+====================================================== -->
+<div id="modalScanCreate" class="modal-backdrop" aria-hidden="true">
+  <div class="modal card" role="dialog" aria-modal="true" aria-labelledby="modalScanCreateTitle">
+    <div class="modal-header">
+      <div>
+        <div id="modalScanCreateTitle" style="font-weight:900;font-size:1.1rem;">Cadastro por câmera</div>
+        <div class="muted small">Aponte para o QR Code / código de barras para preencher o PAT/Código.</div>
+      </div>
+      <button class="btn" type="button" onclick="closeScanCreateModal()">Fechar</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="card" style="padding:12px;border-radius:16px;">
+        <div id="scan-create-reader" style="width:100%;"></div>
+        <div id="scanCreateHint" class="muted small" style="margin-top:10px;">
+          Se não aparecer a câmera, autorize nas permissões do navegador.
+        </div>
+      </div>
+
+      <form class="form-grid" onsubmit="manualFillForCreate(event)">
+        <div class="field col-9">
+          <label>Ou digite manualmente</label>
+          <input class="input" id="scanCreateManual" placeholder="Digite o PAT/Código..." autocomplete="off">
+        </div>
+        <div class="field col-3 actions">
+          <button class="btn btn-orange" type="submit">Usar código</button>
+        </div>
+      </form>
+
+      <div class="modal-actions">
+        <button class="btn" type="button" onclick="stopScanCreate(false)">Parar</button>
+        <button class="btn" type="button" onclick="switchScanCreateCamera()">Trocar câmera</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Lib do scanner -->
+<script src="https://unpkg.com/html5-qrcode" defer></script>
+
+<script>
+/* ==========================
+   Modais (já existiam)
+========================== */
+function openModal(id){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.classList.add("show");
+  el.setAttribute("aria-hidden","false");
+
+  const firstInput = el.querySelector("input, select, textarea");
+  if(firstInput) firstInput.focus();
+}
+
+function closeModal(id){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.classList.remove("show");
+  el.setAttribute("aria-hidden","true");
+}
+
+function openEditEquipment(btn){
+  const id = btn.dataset.id;
+
+  document.getElementById("edit_name").value = btn.dataset.name || "";
+  document.getElementById("edit_brand").value = btn.dataset.brand || "";
+  document.getElementById("edit_value").value = btn.dataset.value || "";
+  document.getElementById("edit_invoice_nf").value = btn.dataset.invoice_nf || "";
+  document.getElementById("edit_barcode_pat").value = btn.dataset.barcode_pat || "";
+
+  document.getElementById("edit_location_id").value = btn.dataset.location_id || "";
+  document.getElementById("edit_sector_id").value = btn.dataset.sector_id || "";
+
+  const form = document.getElementById("editEquipmentForm");
+  form.action = "{{ url_for('main.equipments_update', equipment_id=0) }}".replace("/0/", "/" + id + "/");
+
+  openModal("modalEquipmentEdit");
+}
+
+function openDeleteModal(actionUrl, equipmentName, barcodePat){
+  const form = document.getElementById("deleteEquipmentForm");
+  const nameEl = document.getElementById("deleteEquipmentName");
+  const patEl  = document.getElementById("deleteEquipmentPat");
+  const input  = document.getElementById("deleteConfirmInput");
+  const btn    = document.getElementById("deleteConfirmBtn");
+
+  form.action = actionUrl;
+  nameEl.textContent = equipmentName || "-";
+  patEl.textContent = barcodePat || "-";
+
+  input.value = "";
+  btn.disabled = true;
+  btn.style.opacity = ".55";
+  btn.style.cursor = "not-allowed";
+
+  openModal("modalDeleteConfirm");
+}
+
+document.addEventListener("input", (e) => {
+  if(e.target && e.target.id === "deleteConfirmInput"){
+    const btn = document.getElementById("deleteConfirmBtn");
+    const ok = (e.target.value || "").trim().toUpperCase() === "EXCLUIR";
+    btn.disabled = !ok;
+    btn.style.opacity = ok ? "1" : ".55";
+    btn.style.cursor = ok ? "pointer" : "not-allowed";
+  }
+});
+
+/* ==========================
+   ✅ SCAN PARA CADASTRO
+========================== */
+let scanCreateQr = null;
+let scanCreateRunning = false;
+let scanCreateHandling = false;
+let scanCreateCameras = [];
+let scanCreateCameraId = null;
+
+function openScanModalForCreate(){
+  openModal("modalScanCreate");
+
+  const waitLib = () => {
+    if(!window.Html5Qrcode) return setTimeout(waitLib, 80);
+    startScanCreate();
+  };
+  waitLib();
+}
+
+async function startScanCreate(){
+  if(scanCreateRunning) return;
+
+  const reader = document.getElementById("scan-create-reader");
+  const hint = document.getElementById("scanCreateHint");
+  if(!reader) return;
+
+  reader.innerHTML = "";
+
+  scanCreateQr = new Html5Qrcode("scan-create-reader");
+
+  try{
+    scanCreateHandling = false;
+
+    scanCreateCameras = await Html5Qrcode.getCameras();
+    if(!scanCreateCameras || !scanCreateCameras.length){
+      if(hint) hint.textContent = "Nenhuma câmera encontrada.";
+      return;
+    }
+
+    if(!scanCreateCameraId){
+      const back = scanCreateCameras.find(d => /back|rear|environment/i.test(d.label || ""));
+      scanCreateCameraId = (back || scanCreateCameras[0]).id;
+    }
+
+    scanCreateRunning = true;
+
+    await scanCreateQr.start(
+      { deviceId: { exact: scanCreateCameraId } },
+      { fps: 18, qrbox: { width: 320, height: 220 }, aspectRatio: 1.7777778, disableFlip: true },
+      (decodedText) => {
+        if(scanCreateHandling) return;
+        scanCreateHandling = true;
+
+        const code = String(decodedText || "").trim();
+        if(!code){
+          scanCreateHandling = false;
+          return;
+        }
+        fillPatAndOpenNewEquipment(code);
+      },
+      () => {}
+    );
+
+    if(hint) hint.textContent = "Lendo... aponte para o código.";
+
+  }catch(err){
+    scanCreateRunning = false;
+    if(hint) hint.textContent = "Não foi possível abrir a câmera. Verifique permissões e tente novamente.";
+  }
+}
+
+async function stopScanCreate(silent){
+  const hint = document.getElementById("scanCreateHint");
+  if(!scanCreateQr || !scanCreateRunning){
+    if(!silent && hint) hint.textContent = "";
+    return;
+  }
+
+  try{
+    await scanCreateQr.stop();
+    await scanCreateQr.clear();
+  }catch(e){}
+
+  scanCreateRunning = false;
+  scanCreateQr = null;
+  if(!silent && hint) hint.textContent = "Parado.";
+}
+
+async function closeScanCreateModal(){
+  await stopScanCreate(true);
+  closeModal("modalScanCreate");
+}
+
+async function switchScanCreateCamera(){
+  const hint = document.getElementById("scanCreateHint");
+  if(!window.Html5Qrcode) return;
+
+  if(!scanCreateCameras.length){
+    scanCreateCameras = await Html5Qrcode.getCameras();
+  }
+  if(scanCreateCameras.length < 2){
+    if(hint) hint.textContent = "Só há uma câmera disponível.";
+    return;
+  }
+
+  const idx = scanCreateCameras.findIndex(c => c.id === scanCreateCameraId);
+  const next = scanCreateCameras[(idx + 1) % scanCreateCameras.length];
+  scanCreateCameraId = next.id;
+
+  await stopScanCreate(true);
+  await startScanCreate();
+}
+
+function manualFillForCreate(e){
+  e.preventDefault();
+  const v = (document.getElementById("scanCreateManual").value || "").trim();
+  if(!v) return;
+  fillPatAndOpenNewEquipment(v);
+}
+
+async function fillPatAndOpenNewEquipment(code){
+  await stopScanCreate(true);
+  closeModal("modalScanCreate");
+
+  openModal("modalEquipmentNew");
+
+  const patInput = document.getElementById("new_barcode_pat");
+  if(patInput){
+    patInput.value = code;
+    patInput.dispatchEvent(new Event("input", { bubbles:true }));
+  }
+
+  const nameInput = document.querySelector("#modalEquipmentNew input[name='name']");
+  if(nameInput) nameInput.focus();
+}
+
+/* ==========================
+   Fechar com ESC e clique fora
+========================== */
+document.addEventListener("keydown", async (e) => {
+  if(e.key === "Escape"){
+    closeModal("modalEquipmentNew");
+    closeModal("modalEquipmentEdit");
+    closeModal("modalDeleteConfirm");
+    await closeScanCreateModal();
+  }
+});
+
+document.addEventListener("click", async (e) => {
+  const backdrops = ["modalEquipmentNew", "modalEquipmentEdit", "modalDeleteConfirm", "modalScanCreate"];
+  for(const id of backdrops){
+    const backdrop = document.getElementById(id);
+    if(backdrop && backdrop.classList.contains("show") && e.target === backdrop){
+      if(id === "modalScanCreate"){
+        await closeScanCreateModal();
+      }else{
+        closeModal(id);
+      }
+    }
+  }
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,484 @@
+:root{
+  --orange:#FF6A00;
+
+  /* ✅ tema um pouco mais claro (mantém dark premium) */
+  --black:#141422;                 /* fundo principal (mais claro) */
+  --surface:#1B1B2D;               /* cards/modais (mais claro que antes) */
+  --surface-2: rgba(255,255,255,.08);
+  --border: rgba(255,255,255,.14);
+  --muted: rgba(255,255,255,.72);
+  --text: rgba(255,255,255,.94);
+
+  /* ✅ topbar diferenciada */
+  --topbar: rgba(26,26,42,.82);    /* barra mais clara que o fundo */
+  --topbar-border: rgba(255,255,255,.16);
+}
+
+/* ===== Reset / Base ===== */
+*{ box-sizing: border-box; }
+html, body{ height: 100%; }
+
+body{
+  margin: 0;
+  min-height: 100vh;
+
+  /* ✅ FUNDO ÚNICO (sem degradê) */
+  background: var(--black);
+  color: var(--text);
+}
+
+a{ color: inherit; text-decoration: none; }
+img, svg, video{ max-width: 100%; height: auto; }
+
+/* ===== App layout ===== */
+.app{
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.main{ flex: 1; }
+
+.container{
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 18px 28px;
+  min-width: 0;
+}
+
+/* ===== Topbar premium (mais diferente do fundo) ===== */
+.topbar{
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  padding: 14px 0;
+
+  /* ✅ diferença visual */
+  background: var(--topbar);
+  backdrop-filter: blur(14px);
+
+  border-bottom: 1px solid var(--topbar-border);
+
+  /* ✅ “glow” bem sutil no topo pra dar destaque */
+  box-shadow:
+    0 10px 30px rgba(0,0,0,.35),
+    inset 0 -1px 0 rgba(255,255,255,.06);
+}
+
+.topbar-inner{
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.brand{
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.brand-icon{
+  width: 40px;
+  height: 40px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(255,106,0,.95), rgba(255,140,66,.92));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0B0B0F;
+  font-weight: 900;
+  flex: 0 0 auto;
+}
+
+.brand-text{ min-width: 0; }
+.brand-title{
+  font-weight: 900;
+  letter-spacing: .2px;
+  line-height: 1.1;
+}
+.brand-subtitle{
+  color: rgba(255,255,255,.70);
+  font-size: .9rem;
+  line-height: 1.1;
+}
+
+/* ===== Nav ===== */
+.nav{
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+/* (se você usar .navlink em algum lugar, mantive) */
+.navlink{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: .55rem .85rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.08);
+  transition: transform .12s ease, background .12s ease, border-color .12s ease;
+  color: var(--text);
+  white-space: nowrap;
+}
+.navlink:hover{
+  transform: translateY(-1px);
+  background: rgba(255,255,255,.12);
+}
+.navlink.active{
+  border-color: rgba(255,106,0,.55);
+  box-shadow: 0 0 0 4px rgba(255,106,0,.12);
+}
+.navlink-orange{
+  background: linear-gradient(135deg, rgba(255,106,0,.95), rgba(255,140,66,.92));
+  border-color: rgba(255,106,0,.35);
+  color: #0B0B0F;
+  font-weight: 800;
+}
+.navlink-orange:hover{
+  background: linear-gradient(135deg, rgba(255,106,0,1), rgba(255,150,80,1));
+}
+
+/* ===== Badges ===== */
+.badge{
+  display:inline-flex; align-items:center; gap:.4rem;
+  padding:.25rem .55rem;
+  border:1px solid rgba(255,106,0,.32);
+  background: rgba(255,106,0,.10);
+  border-radius:999px;
+  color: var(--text);
+  font-size:.85rem;
+}
+
+/* ===== Cards (mais claros + harmônicos) ===== */
+.card{
+  background: rgba(27,27,45,.88); /* ✅ surface mais claro */
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 18px;
+  box-shadow: 0 16px 50px rgba(0,0,0,.30);
+}
+
+/* ===== Buttons ===== */
+.btn{
+  display:inline-flex; align-items:center; justify-content:center;
+  gap:.5rem;
+  padding: .6rem .9rem;
+  border-radius: 14px;
+
+  /* ✅ um pouco mais contraste */
+  border: 1px solid rgba(255,255,255,.16);
+  background: rgba(255,255,255,.09);
+
+  transition: transform .12s ease, background .12s ease, border-color .12s ease;
+  text-decoration:none;
+  color: var(--text);
+  white-space: nowrap;
+}
+.btn:hover{
+  transform: translateY(-1px);
+  background: rgba(255,255,255,.13);
+}
+.btn-orange{
+  background: linear-gradient(135deg, rgba(255,106,0,.95), rgba(255,140,66,.92));
+  border-color: rgba(255,106,0,.35);
+  color: #0B0B0F;
+  font-weight: 800;
+}
+.btn-orange:hover{
+  background: linear-gradient(135deg, rgba(255,106,0,1), rgba(255,150,80,1));
+}
+
+/* ✅ botão de sair */
+.btn-danger{
+  border: 1px solid rgba(239,68,68,.40);
+  background: rgba(239,68,68,.14);
+  color: #fff;
+}
+.btn-danger:hover{
+  background: rgba(239,68,68,.20);
+  border-color: rgba(239,68,68,.60);
+}
+
+/* ===== Tipografia util ===== */
+.muted{ color: var(--muted); }
+.small{ font-size: .92rem; }
+
+/* ===== Inputs ===== */
+.input, select, textarea{
+  width:100%;
+  max-width: 100%;
+  min-width: 0;
+  display:block;
+
+  /* ✅ mais contraste e mais “premium” */
+  background: rgba(255,255,255,.09);
+  border: 1px solid rgba(255,255,255,.16);
+  color: var(--text);
+
+  border-radius: 14px;
+  padding: .6rem .75rem;
+  outline: none;
+  line-height: 1.2;
+}
+textarea{ resize: vertical; min-height: 110px; }
+.input:focus, select:focus, textarea:focus{
+  border-color: rgba(255,106,0,.55);
+  box-shadow: 0 0 0 4px rgba(255,106,0,.12);
+}
+select{ appearance: none; }
+
+/* ===== Form grid ===== */
+.form-grid{
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+.field{
+  grid-column: span 12;
+  min-width: 0;
+}
+.field label{
+  display:block;
+  margin: 0 0 6px;
+  color: rgba(255,255,255,.84);
+  font-size: .92rem;
+  font-weight: 700;
+}
+.col-3{ grid-column: span 12; }
+.col-4{ grid-column: span 12; }
+.col-6{ grid-column: span 12; }
+
+@media (min-width: 720px){
+  .col-3{ grid-column: span 3; }
+  .col-4{ grid-column: span 4; }
+  .col-6{ grid-column: span 6; }
+}
+
+.actions{
+  display:flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items:center;
+  justify-content:flex-end;
+  grid-column: span 12;
+}
+
+/* ===== Table ===== */
+.table-wrap{ overflow-x: auto; }
+.table{
+  width:100%;
+  border-collapse: collapse;
+  min-width: 720px;
+}
+.table th, .table td{
+  padding: .7rem .65rem;
+  border-bottom: 1px solid rgba(255,255,255,.12);
+  text-align:left;
+  vertical-align: top;
+  white-space: nowrap;
+}
+.table th{
+  color: rgba(255,255,255,.84);
+  font-weight: 800;
+  font-size: .92rem;
+}
+
+/* ===== Flash messages ===== */
+.flash-wrap{
+  display: grid;
+  gap: 10px;
+  margin: 10px 0 18px;
+}
+.flash{
+  padding: .75rem .9rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.09);
+}
+.flash.success{
+  border-color: rgba(34,197,94,.35);
+  background: rgba(34,197,94,.12);
+}
+.flash.error{
+  border-color: rgba(239,68,68,.35);
+  background: rgba(239,68,68,.12);
+}
+
+/* ===== Footer ===== */
+.footer{
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 18px 22px;
+  color: rgba(255,255,255,.55);
+}
+
+/* ===== Modal ===== */
+.modal-backdrop{
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+
+  background: rgba(0,0,0,.52);
+  backdrop-filter: blur(10px);
+  z-index: 100;
+}
+.modal-backdrop.show{ display: flex; }
+
+.modal{
+  width: min(720px, 100%);
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,.16);
+
+  /* ✅ igual aos cards pra harmonia */
+  background: rgba(27,27,45,.96);
+
+  box-shadow: 0 30px 90px rgba(0,0,0,.42);
+  max-height: calc(100vh - 36px);
+  overflow: auto;
+}
+.modal-header{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap: 12px;
+  padding: 14px 14px 0 14px;
+}
+.modal-body{
+  padding: 14px;
+  display:grid;
+  gap: 12px;
+}
+.modal-actions{
+  display:flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items:center;
+  justify-content: flex-end;
+  padding-top: 4px;
+}
+
+/* ===== Mobile tweaks ===== */
+@media (max-width: 520px){
+  .topbar-inner{ flex-direction: column; align-items: flex-start; }
+  .nav{ justify-content: flex-start; }
+  .table{ min-width: 640px; }
+}
+
+/* =========================
+   MODAIS — melhorias de visualização
+   (resolve select escondido + z-index + scroll)
+========================= */
+
+/* backdrop sempre por cima */
+.modal-backdrop{
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(0,0,0,.62);
+  z-index: 9990;
+}
+
+.modal-backdrop.show{
+  display: flex;
+}
+
+/* modal card */
+.modal{
+  width: min(920px, calc(100vw - 26px));
+  max-height: calc(100vh - 36px);
+  overflow: auto; /* ✅ se o conteúdo for grande, rola dentro */
+  border-radius: 18px;
+  z-index: 9991;
+}
+
+/* tamanhos opcionais */
+.modal.modal-md{ width: min(720px, calc(100vw - 26px)); }
+.modal.modal-lg{ width: min(920px, calc(100vw - 26px)); }
+
+/* header/body mais “respirado” */
+.modal-header{
+  position: sticky; /* ✅ header fixo quando rolar */
+  top: 0;
+  background: rgba(18,18,26,.96);
+  backdrop-filter: blur(10px);
+  z-index: 2;
+  padding: 14px 14px;
+  border-bottom: 1px solid rgba(255,255,255,.10);
+}
+
+.modal-body{
+  padding: 14px 14px 16px 14px;
+}
+
+/* melhora inputs e selects dentro de modais */
+.modal .input,
+.modal select.input,
+.modal textarea.input{
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.06);
+  color: rgba(255,255,255,.92);
+  outline: none;
+}
+
+/* foco mais visível */
+.modal .input:focus,
+.modal select.input:focus,
+.modal textarea.input:focus{
+  border-color: rgba(255,106,0,.55);
+  box-shadow: 0 0 0 4px rgba(255,106,0,.16);
+}
+
+/* labels mais claros */
+.modal label{
+  display: block;
+  margin-bottom: 6px;
+  color: rgba(255,255,255,.86);
+  font-weight: 700;
+  font-size: .92rem;
+}
+
+/* ações do modal */
+.modal-actions{
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+/* ✅ MUITO IMPORTANTE:
+   garante que dropdown de <select> não fique "atrás"
+   e remove travas comuns por transform/overflow de containers */
+.modal, .modal *{
+  transform: none !important;
+}
+
+select, option{
+  color: #000; /* dropdown do browser geralmente usa fundo claro */
+}
+
+/* se seu tema usa select com cor branca e some, habilite isso: */
+.modal select.input{
+  color: rgba(255,255,255,.92);
+}
+
+/* ajuda a evitar que algum card/table com overflow esconda coisas */
+.card{ overflow: visible; }

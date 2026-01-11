@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% block title %}Pesquisa por Câmera — Inventário{% endblock %}
+{% block content %}
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+  <h1 style="margin:0;">Pesquisar por PAT/Código</h1>
+  <a class="btn" href="{{ url_for('main.equipments_list') }}">Ver equipamentos</a>
+</div>
+
+<section style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
+  <div class="card" style="padding:16px;">
+    <h2 style="margin:0 0 10px;font-size:1.05rem;">Buscar digitando</h2>
+    <form method="get" style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;">
+      <div style="flex:1;min-width:220px;">
+        <label class="muted small">PAT/Código</label>
+        <input class="input" name="code" value="{{ code }}" placeholder="Ex.: 7890001234567">
+      </div>
+      <button class="btn btn-orange" type="submit">Buscar</button>
+    </form>
+
+    {% if result %}
+      <div class="card" style="padding:14px;margin-top:12px;border-radius:16px;">
+        <div class="badge">Encontrado</div>
+        <div style="margin-top:8px;">
+          <div style="font-size:1.15rem;font-weight:900;">{{ result.name }}</div>
+          <div class="muted small">{{ result.brand or '-' }}</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+          <div class="card" style="padding:10px;border-radius:14px;">
+            <div class="muted small">Localização</div>
+            <div><b>{{ result.location.name }}</b></div>
+          </div>
+          <div class="card" style="padding:10px;border-radius:14px;">
+            <div class="muted small">Setor</div>
+            <div><b>{{ result.sector.name }}</b></div>
+          </div>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">
+          <span class="badge">PAT: {{ result.barcode_pat }}</span>
+          {% if result.invoice_nf %}<span class="badge">NF: {{ result.invoice_nf }}</span>{% endif %}
+        </div>
+        <div style="margin-top:10px;">
+          <a class="btn" href="{{ url_for('main.equipments_edit', equipment_id=result.id) }}">Editar equipamento</a>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="card" style="padding:16px;">
+    <h2 style="margin:0 0 10px;font-size:1.05rem;">Ler com câmera</h2>
+    <p class="muted small" style="margin:0 0 12px;">
+      Permita o acesso à câmera. Ao ler o código, ele preenche e faz a busca automaticamente.
+    </p>
+
+    <div id="reader" class="card" style="padding:10px;border-radius:16px;"></div>
+
+    <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+      <button class="btn btn-orange" type="button" onclick="startScan()">Iniciar</button>
+      <button class="btn" type="button" onclick="stopScan()">Parar</button>
+      <button class="btn" type="button" onclick="switchCamera()">Trocar câmera</button>
+      <span id="scanStatus" class="muted small"></span>
+    </div>
+  </div>
+</section>
+
+<!-- html5-qrcode via CDN -->
+<script src="https://unpkg.com/html5-qrcode" defer></script>
+<script>
+let html5Qrcode = null;
+let camerasCache = [];
+let currentCameraId = null;
+let isRunning = false;
+let isHandling = false;
+
+function setStatus(msg){
+  const el = document.getElementById("scanStatus");
+  if(el) el.textContent = msg || "";
+}
+
+function pickBestCamera(devices){
+  // prefere câmera traseira quando houver label
+  const back = devices.find(d => /back|rear|environment/i.test(d.label || ""));
+  return back || devices[0];
+}
+
+async function loadCameras(){
+  if (!window.Html5Qrcode) return [];
+  const devices = await Html5Qrcode.getCameras();
+  camerasCache = devices || [];
+  return camerasCache;
+}
+
+async function startScan(){
+  setStatus("Iniciando câmera...");
+
+  if(!window.Html5Qrcode){
+    setStatus("Carregando biblioteca... tente novamente.");
+    return;
+  }
+
+  if(isRunning) return;
+
+  const readerId = "reader";
+  if(!html5Qrcode){
+    html5Qrcode = new Html5Qrcode(readerId);
+  }
+
+  try{
+    const devices = await loadCameras();
+    if(!devices.length){
+      setStatus("Nenhuma câmera encontrada.");
+      return;
+    }
+
+    // define câmera (tenta traseira)
+    if(!currentCameraId){
+      const preferred = pickBestCamera(devices);
+      currentCameraId = preferred.id;
+    }
+
+    isHandling = false;
+
+    // ✅ configs melhores p/ QR + barras
+    const config = {
+      fps: 18,
+      qrbox: { width: 320, height: 220 }, // retangular ajuda em código de barras
+      aspectRatio: 1.7777778,
+      disableFlip: true
+    };
+
+    await html5Qrcode.start(
+      { deviceId: { exact: currentCameraId } },
+      config,
+      async (decodedText) => {
+        if(isHandling) return; // debounce
+        isHandling = true;
+
+        const code = String(decodedText || "").trim();
+        if(!code){
+          isHandling = false;
+          return;
+        }
+
+        setStatus("Código lido: " + code);
+
+        await stopScan(true);
+
+        window.location.href = "{{ url_for('main.scan_page') }}" + "?code=" + encodeURIComponent(code);
+      },
+      () => {}
+    );
+
+    isRunning = true;
+    setStatus("Lendo... aponte para o QR Code / código de barras.");
+
+  }catch(err){
+    isRunning = false;
+    setStatus("Erro ao iniciar câmera: " + err);
+  }
+}
+
+async function stopScan(silent){
+  if(!html5Qrcode || !isRunning){
+    if(!silent) setStatus("");
+    return;
+  }
+
+  try{
+    await html5Qrcode.stop();
+    await html5Qrcode.clear();
+  }catch(e){
+    // ignore
+  }
+
+  isRunning = false;
+  if(!silent) setStatus("Parado.");
+}
+
+async function switchCamera(){
+  if(!window.Html5Qrcode){
+    setStatus("Biblioteca ainda não carregou.");
+    return;
+  }
+
+  if(!camerasCache.length){
+    await loadCameras();
+  }
+
+  if(camerasCache.length < 2){
+    setStatus("Só há uma câmera disponível.");
+    return;
+  }
+
+  const idx = camerasCache.findIndex(c => c.id === currentCameraId);
+  const next = camerasCache[(idx + 1) % camerasCache.length];
+  currentCameraId = next.id;
+
+  await stopScan(true);
+  await startScan();
+  setStatus("Trocando câmera...");
+}
+
+// opcional: iniciar automaticamente ao abrir a página
+// window.addEventListener("load", () => startScan());
+</script>
+
+{% endblock %}

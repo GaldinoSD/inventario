@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}Inventário{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+
+<body class="app">
+
+  <header class="topbar">
+    <div class="container topbar-inner" style="
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+    ">
+
+      <!-- ESQUERDA: LOGO -->
+      <a href="{{ url_for('main.index') }}" class="brand" style="
+        display:flex;
+        align-items:center;
+        gap:12px;
+        text-decoration:none;
+        flex:0 0 auto;
+      ">
+        <div class="brand-icon" style="
+          width:84px;
+          height:60px;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          background:transparent;
+          overflow:hidden;
+        ">
+          <img
+            src="{{ url_for('static', filename='logo.png') }}"
+            alt="Logo"
+            style="
+              height:60px;
+              width:auto;
+              max-width:100%;
+              object-fit:contain;
+            "
+          >
+        </div>
+
+        <div class="brand-text" style="display:none;">
+          <div class="brand-title">Inventário</div>
+          <div class="muted small">IMO</div>
+        </div>
+      </a>
+
+      <!-- CENTRO: BOTÕES -->
+      <nav class="nav" style="
+        flex:1 1 auto;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        gap:10px;
+        flex-wrap:wrap;
+        min-width:0;
+      ">
+        <a class="btn btn-orange" href="{{ url_for('main.index') }}">Inventário</a>
+        <a class="btn btn-orange" href="{{ url_for('main.locations_sectors') }}">
+          Cadastro de Localização
+        </a>
+        <a class="btn btn-orange" href="{{ url_for('main.equipments_list') }}">Equipamentos</a>
+
+        <button class="btn btn-orange" type="button" onclick="openScanModal()">
+          Pesquisa (Câmera)
+        </button>
+      </nav>
+
+      <!-- DIREITA: SAIR -->
+      <div style="flex:0 0 auto; display:flex; align-items:center;">
+        <a class="btn btn-danger" href="{{ url_for('auth.logout') }}">Sair</a>
+      </div>
+
+    </div>
+  </header>
+
+  <main class="main">
+    <div class="container page">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="flash-wrap">
+            {% for category, message in messages %}
+              <div class="flash {{ category }}">{{ message }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+  {% block modal %}{% endblock %}
+
+  <!-- ===================== MODAL SCAN (CÂMERA) ===================== -->
+  <div class="modal-backdrop" id="scanModal" aria-hidden="true">
+    <div class="modal card modal-lg" role="dialog" aria-modal="true" aria-labelledby="scanTitle">
+      <div class="modal-header">
+        <div>
+          <div id="scanTitle" style="font-weight:900;">Pesquisar por câmera</div>
+          <div class="muted small">Aponte para o QR Code / Código de barras</div>
+        </div>
+        <button class="btn" type="button" onclick="closeScanModal()">Fechar</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="card" style="padding:12px;">
+          <div id="qr-reader" style="width:100%;"></div>
+          <div id="scanHint" class="muted small" style="margin-top:10px;">
+            Se não aparecer a câmera, autorize nas permissões do navegador.
+          </div>
+        </div>
+
+        <form class="form-grid" onsubmit="manualSearch(event)" style="margin-top:12px;">
+          <div class="field col-9">
+            <label>Pesquisar manualmente</label>
+            <input class="input" id="scanManual" placeholder="Digite o código..." autocomplete="off">
+          </div>
+          <div class="field col-3 actions" style="display:flex;align-items:end;">
+            <button class="btn btn-orange" type="submit" style="width:100%;">Buscar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== MODAL PRODUTO (DETALHES) ===================== -->
+  <div class="modal-backdrop" id="productModal" aria-hidden="true">
+    <div class="modal card modal-md" role="dialog" aria-modal="true" aria-labelledby="productTitle">
+      <div class="modal-header">
+        <div>
+          <div id="productTitle" style="font-weight:900;">Produto</div>
+          <div class="muted small" id="productSubtitle">Detalhes do equipamento</div>
+        </div>
+        <button class="btn" type="button" onclick="closeProductModal()">Fechar</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="card" style="padding:14px; display:grid; gap:10px;">
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <span class="badge" id="pm_code">PAT/Código: -</span>
+            <span class="badge" id="pm_sector">Setor: -</span>
+            <span class="badge" id="pm_location">Local: -</span>
+          </div>
+
+          <div style="display:grid; gap:6px;">
+            <div style="font-weight:900; font-size:1.05rem;" id="pm_name">Nome: -</div>
+            <div class="muted small" id="pm_brand">Marca: -</div>
+            <div class="muted small" id="pm_nf">NF: -</div>
+            <div class="muted small" id="pm_value">Valor: -</div>
+          </div>
+        </div>
+
+        <div class="modal-actions" style="margin-top:12px;">
+          <a class="btn" id="pm_open" href="{{ url_for('main.equipments_list') }}">Abrir na lista</a>
+          <button class="btn btn-orange" type="button" onclick="scanAgain()">Escanear outro</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lib do scanner -->
+  <script src="https://unpkg.com/html5-qrcode" defer></script>
+
+  <!-- JS ORIGINAL (inalterado) -->
+  <script>
+    let html5QrCode = null;
+    let scannerRunning = false;
+
+    function openScanModal(){
+      const modal = document.getElementById('scanModal');
+      modal.classList.add('show');
+      modal.setAttribute('aria-hidden', 'false');
+
+      const waitLib = () => {
+        if (!window.Html5Qrcode) return setTimeout(waitLib, 80);
+        startScanner();
+      };
+      waitLib();
+    }
+
+    async function startScanner(){
+      if (scannerRunning) return;
+
+      const el = document.getElementById("qr-reader");
+      if (!el) return;
+
+      el.innerHTML = "";
+      html5QrCode = new Html5Qrcode("qr-reader");
+
+      try{
+        scannerRunning = true;
+
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          { fps: 12, qrbox: { width: 250, height: 250 } },
+          (decodedText) => handleScanResult(decodedText),
+          () => {}
+        );
+      }catch(err){
+        scannerRunning = false;
+        document.getElementById("qr-reader").innerHTML =
+          `<div class="muted small">Não foi possível abrir a câmera. Verifique permissões do navegador e tente novamente.</div>`;
+      }
+    }
+
+    async function stopScanner(){
+      if (!html5QrCode || !scannerRunning) return;
+      try{
+        await html5QrCode.stop();
+        await html5QrCode.clear();
+      }catch(e){}
+      scannerRunning = false;
+      html5QrCode = null;
+    }
+
+    async function closeScanModal(){
+      await stopScanner();
+      const modal = document.getElementById('scanModal');
+      modal.classList.remove('show');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+
+    function openProductModal(){
+      const modal = document.getElementById('productModal');
+      modal.classList.add('show');
+      modal.setAttribute('aria-hidden', 'false');
+    }
+
+    async function closeProductModal(){
+      const modal = document.getElementById('productModal');
+      modal.classList.remove('show');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+
+    document.addEventListener("click", async (e) => {
+      const scan = document.getElementById("scanModal");
+      const prod = document.getElementById("productModal");
+
+      if (scan.classList.contains("show") && e.target === scan) await closeScanModal();
+      if (prod.classList.contains("show") && e.target === prod) await closeProductModal();
+    });
+
+    document.addEventListener("keydown", async (e) => {
+      if (e.key !== "Escape") return;
+      const scan = document.getElementById("scanModal");
+      const prod = document.getElementById("productModal");
+
+      if (scan.classList.contains("show")) await closeScanModal();
+      if (prod.classList.contains("show")) await closeProductModal();
+    });
+
+    function manualSearch(e){
+      e.preventDefault();
+      const v = document.getElementById("scanManual").value.trim();
+      if (!v) return;
+      handleScanResult(v);
+    }
+
+    function formatBRL(valueStr){
+      if (!valueStr) return "-";
+      const n = Number(String(valueStr).replace(",", "."));
+      if (Number.isNaN(n)) return valueStr;
+      try{
+        return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+      }catch(e){
+        return valueStr;
+      }
+    }
+
+    async function handleScanResult(text){
+      await stopScanner();
+
+      try{
+        const res = await fetch(`/api/equipment/by-barcode?code=${encodeURIComponent(text)}`, {
+          headers: { "Accept": "application/json" }
+        });
+        const data = await res.json();
+
+        document.getElementById('scanModal').classList.remove('show');
+        document.getElementById('scanModal').setAttribute('aria-hidden', 'true');
+
+        if (!data.ok){
+          fillProductNotFound(text, true);
+          openProductModal();
+          return;
+        }
+
+        if (!data.found){
+          fillProductNotFound(text, false);
+          openProductModal();
+          return;
+        }
+
+        const eq = data.equipment || {};
+
+        document.getElementById("productTitle").textContent = "Equipamento encontrado";
+        document.getElementById("productSubtitle").textContent = "Informações do cadastro";
+
+        document.getElementById("pm_code").textContent = `PAT/Código: ${eq.barcode_pat || "-"}`;
+        document.getElementById("pm_sector").textContent = `Setor: ${eq.sector || "-"}`;
+        document.getElementById("pm_location").textContent = `Local: ${eq.location || "-"}`;
+
+        document.getElementById("pm_name").textContent = eq.name ? eq.name : "Nome: -";
+        document.getElementById("pm_brand").textContent = `Marca: ${eq.brand || "-"}`;
+        document.getElementById("pm_nf").textContent = `NF: ${eq.invoice_nf || "-"}`;
+        document.getElementById("pm_value").textContent = `Valor: ${formatBRL(eq.value)}`;
+
+        const url = new URL("{{ url_for('main.equipments_list') }}", window.location.origin);
+        url.searchParams.set("q", eq.barcode_pat || text);
+        document.getElementById("pm_open").href = url.toString();
+
+        openProductModal();
+
+      }catch(err){
+        document.getElementById('scanModal').classList.remove('show');
+        document.getElementById('scanModal').setAttribute('aria-hidden', 'true');
+        fillProductNotFound(text, true);
+        openProductModal();
+      }
+    }
+
+    function fillProductNotFound(code, isError){
+      document.getElementById("productTitle").textContent = isError ? "Erro ao consultar" : "Não encontrado";
+      document.getElementById("productSubtitle").textContent = isError
+        ? "Falha ao consultar o cadastro"
+        : "Nenhum equipamento cadastrado com esse PAT/Código";
+
+      document.getElementById("pm_code").textContent = `PAT/Código: ${code}`;
+      document.getElementById("pm_sector").textContent = `Setor: -`;
+      document.getElementById("pm_location").textContent = `Local: -`;
+
+      document.getElementById("pm_name").textContent = isError ? "Tente novamente." : "Você pode cadastrar este item.";
+      document.getElementById("pm_brand").textContent = "Marca: -";
+      document.getElementById("pm_nf").textContent = "NF: -";
+      document.getElementById("pm_value").textContent = "Valor: -";
+
+      const url = new URL("{{ url_for('main.equipments_list') }}", window.location.origin);
+      url.searchParams.set("q", code);
+      document.getElementById("pm_open").href = url.toString();
+    }
+
+    async function scanAgain(){
+      await closeProductModal();
+      openScanModal();
+    }
+  </script>
+
+</body>
+</html>

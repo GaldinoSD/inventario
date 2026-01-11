@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if equipment else 'Novo' }} Equipamento{% endblock %}
+{% block content %}
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+  <h1 style="margin:0;">{{ 'Editar' if equipment else 'Novo' }} Equipamento</h1>
+  <a class="btn" href="{{ url_for('main.equipments_list') }}">Voltar</a>
+</div>
+
+<form method="post" class="card" style="padding:16px;margin-top:12px;display:grid;gap:12px;">
+  <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;">
+    <div>
+      <label class="muted small">Nome *</label>
+      <input class="input" name="name" value="{{ equipment.name if equipment else '' }}" placeholder="Ex.: Mesa de Som" required>
+    </div>
+    <div>
+      <label class="muted small">Marca</label>
+      <input class="input" name="brand" value="{{ equipment.brand if equipment else '' }}" placeholder="Ex.: Yamaha">
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+    <div>
+      <label class="muted small">Valor (R$)</label>
+      <input class="input" name="value" value="{{ equipment.value if equipment and equipment.value is not none else '' }}" placeholder="Ex.: 1500,00">
+    </div>
+    <div>
+      <label class="muted small">NF</label>
+      <input class="input" name="invoice_nf" value="{{ equipment.invoice_nf if equipment else '' }}" placeholder="Número da nota">
+    </div>
+    <div>
+      <label class="muted small">PAT / Código de barras *</label>
+      <input class="input" name="barcode_pat" value="{{ equipment.barcode_pat if equipment else '' }}" placeholder="Ex.: 7890001234567" required>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+    <div>
+      <label class="muted small">Localização/Igreja *</label>
+      <select name="location_id" required>
+        <option value="" disabled {% if not equipment %}selected{% endif %}>Selecione...</option>
+        {% for loc in locations %}
+          <option value="{{ loc.id }}"
+            {% if equipment and equipment.location_id == loc.id %}selected{% endif %}>
+            {{ loc.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="muted small">Setor *</label>
+      <select name="sector_id" required>
+        <option value="" disabled {% if not equipment %}selected{% endif %}>Selecione...</option>
+        {% for s in sectors %}
+          <option value="{{ s.id }}"
+            {% if equipment and equipment.sector_id == s.id %}selected{% endif %}>
+            {{ s.name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+    <button class="btn btn-orange" type="submit">Salvar</button>
+    <a class="btn" href="{{ url_for('main.equipments_list') }}">Cancelar</a>
+    <a class="btn" href="{{ url_for('main.scan_page') }}">Testar leitor (câmera)</a>
+  </div>
+
+  <p class="muted small" style="margin:0;">
+    * PAT/Código é único. Se repetir, o sistema bloqueia.
+  </p>
+</form>
+{% endblock %}

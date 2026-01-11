@@ -1,0 +1,463 @@
+{% extends "base.html" %}
+{% block title %}Cadastro de Localizações e Setores — Inventário{% endblock %}
+{% block content %}
+
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+  <h1 style="margin:0;">Cadastro (Localizações + Setores)</h1>
+
+  <div style="display:flex;gap:10px;flex-wrap:wrap;">
+    <!-- ✅ Mantém apenas o botão de Nova Localização -->
+    <button class="btn btn-orange" type="button" onclick="openModal('modalLocationNew')">
+      + Nova Localização
+    </button>
+  </div>
+</div>
+
+<!-- =========================
+     FILTRO: selecionar localização
+========================= -->
+<form method="get" class="card" style="padding:12px;margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:end;">
+  <div style="flex:1;min-width:220px;">
+    <label class="muted small">Filtrar localização</label>
+    <select class="input" name="location_id">
+      <option value="">Todas</option>
+      {% for loc in locations %}
+        <option value="{{ loc.id }}" {% if selected_location_id and selected_location_id == loc.id %}selected{% endif %}>
+          {{ loc.name }}
+        </option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div style="flex:1;min-width:220px;">
+    <label class="muted small">Pesquisar localização</label>
+    <input class="input" name="q_loc" value="{{ q_loc }}" placeholder="Ex.: Igreja Central">
+  </div>
+
+  <button class="btn" type="submit">Aplicar</button>
+
+  {% if q_loc or selected_location_id %}
+    <a class="btn" href="{{ url_for('main.locations_sectors') }}">Limpar</a>
+  {% endif %}
+</form>
+
+<!-- =========================
+     BLOCO: LOCALIZAÇÕES (COM SETORES DENTRO)
+========================= -->
+<div class="card" style="padding:0;margin-top:12px;overflow:hidden;">
+  <div style="padding:12px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+    <div>
+      <div style="font-weight:900;">Localizações / Igrejas</div>
+      <div class="muted small">Cadastre primeiro a localização, depois cadastre os setores vinculados.</div>
+    </div>
+
+    <div class="muted small">
+      {% if selected_location %}
+        Exibindo: <b>{{ selected_location.name }}</b>
+      {% else %}
+        Exibindo: <b>Todas</b>
+      {% endif %}
+    </div>
+  </div>
+
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Nome</th>
+        <th class="muted">Endereço</th>
+        <th class="muted">Setores</th>
+        <th style="width:280px;">Ações</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% if locations_filtered %}
+        {% for loc in locations_filtered %}
+        <tr>
+          <td><b>{{ loc.name }}</b></td>
+          <td class="muted">{{ loc.address or "-" }}</td>
+
+          <!-- ✅ Setores no mesmo campo da localização -->
+          <td>
+            {% if loc.sectors and (loc.sectors|length > 0) %}
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                {% for s in loc.sectors %}
+                  <span class="badge" style="border:1px solid rgba(255,255,255,.12);">
+                    {{ s.name }}
+
+                    <!-- mini ações por setor -->
+                    <button
+                      type="button"
+                      class="btn"
+                      style="padding:.15rem .45rem;margin-left:.35rem;"
+                      onclick="openEditSectorFromBadge(this)"
+                      data-id="{{ s.id }}"
+                      data-name="{{ s.name|e }}"
+                      data-location-id="{{ loc.id }}"
+                      title="Editar setor"
+                    >
+                      ✎
+                    </button>
+
+                    <button
+                      type="button"
+                      class="btn btn-danger"
+                      style="padding:.15rem .45rem;margin-left:.25rem;"
+                      onclick="openDeleteSectorModal('{{ url_for('main.unified_sector_delete', sector_id=s.id) }}', '{{ s.name|e }}')"
+                      title="Excluir setor"
+                    >
+                      ×
+                    </button>
+                  </span>
+                {% endfor %}
+              </div>
+            {% else %}
+              <span class="muted small">Nenhum setor cadastrado</span>
+            {% endif %}
+          </td>
+
+          <td>
+            <button
+              class="btn"
+              type="button"
+              onclick="openEditLocation(this)"
+              data-id="{{ loc.id }}"
+              data-name="{{ loc.name|e }}"
+              data-address="{{ (loc.address or '')|e }}"
+              data-notes="{{ (loc.notes or '')|e }}"
+            >
+              Editar
+            </button>
+
+            <button
+              class="btn btn-danger"
+              type="button"
+              onclick="openDeleteLocationModal('{{ url_for('main.locations_delete', location_id=loc.id) }}', '{{ loc.name|e }}')"
+            >
+              Excluir
+            </button>
+
+            <!-- ✅ cadastrar setor já com esta localização FIXA -->
+            <button
+              class="btn btn-orange"
+              type="button"
+              onclick="openSectorModalForLocation('{{ loc.id }}', '{{ loc.name|e }}')"
+            >
+              + Setor
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      {% else %}
+        <tr><td colspan="4" class="muted">Nenhuma localização encontrada.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
+
+<!-- ======================================================
+     MODAL: Nova Localização/Igreja
+====================================================== -->
+<div id="modalLocationNew" class="modal-backdrop" aria-hidden="true">
+  <div class="modal card" role="dialog" aria-modal="true" aria-labelledby="modalLocationNewTitle">
+    <div class="modal-header">
+      <div>
+        <div id="modalLocationNewTitle" style="font-weight:900;font-size:1.1rem;">Nova Localização/Igreja</div>
+        <div class="muted small">Preencha os campos e salve.</div>
+      </div>
+      <button class="btn" type="button" onclick="closeModal('modalLocationNew')">Fechar</button>
+    </div>
+
+    <form method="post" action="{{ url_for('main.locations_create') }}" class="modal-body">
+      <div>
+        <label class="muted small">Nome *</label>
+        <input class="input" name="name" placeholder="Ex.: Igreja Central" required>
+      </div>
+
+      <div>
+        <label class="muted small">Endereço</label>
+        <input class="input" name="address" placeholder="Rua, nº, bairro, cidade">
+      </div>
+
+      <div>
+        <label class="muted small">Observação</label>
+        <input class="input" name="notes" placeholder="Opcional">
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-orange" type="submit">Salvar</button>
+        <button class="btn" type="button" onclick="closeModal('modalLocationNew')">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- ======================================================
+     MODAL: Editar Localização/Igreja
+====================================================== -->
+<div id="modalLocationEdit" class="modal-backdrop" aria-hidden="true">
+  <div class="modal card" role="dialog" aria-modal="true" aria-labelledby="modalLocationEditTitle">
+    <div class="modal-header">
+      <div>
+        <div id="modalLocationEditTitle" style="font-weight:900;font-size:1.1rem;">Editar Localização/Igreja</div>
+        <div class="muted small">Altere os campos e salve.</div>
+      </div>
+      <button class="btn" type="button" onclick="closeModal('modalLocationEdit')">Fechar</button>
+    </div>
+
+    <form id="editLocationForm" method="post" class="modal-body" action="">
+      <div>
+        <label class="muted small">Nome *</label>
+        <input id="edit_loc_name" class="input" name="name" required>
+      </div>
+
+      <div>
+        <label class="muted small">Endereço</label>
+        <input id="edit_loc_address" class="input" name="address">
+      </div>
+
+      <div>
+        <label class="muted small">Observação</label>
+        <input id="edit_loc_notes" class="input" name="notes">
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-orange" type="submit">Salvar alterações</button>
+        <button class="btn" type="button" onclick="closeModal('modalLocationEdit')">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- ======================================================
+     MODAL: CONFIRMAR EXCLUSÃO (LOCALIZAÇÃO)
+====================================================== -->
+<div id="modalLocationDelete" class="modal-backdrop" aria-hidden="true">
+  <div class="modal card" role="dialog" aria-modal="true" aria-labelledby="modalLocationDeleteTitle">
+    <div class="modal-header">
+      <div>
+        <div id="modalLocationDeleteTitle" style="font-weight:900;font-size:1.1rem;">Confirmar exclusão</div>
+        <div class="muted small">Esta ação não poderá ser desfeita.</div>
+      </div>
+      <button class="btn" type="button" onclick="closeModal('modalLocationDelete')">Fechar</button>
+    </div>
+
+    <form id="deleteLocationForm" method="post" class="modal-body" action="">
+      <div class="card" style="padding:12px;border-radius:16px;border:1px solid rgba(239,68,68,.25);">
+        <div class="muted small">Localização/Igreja</div>
+        <div style="font-weight:950;font-size:1.05rem;margin-top:6px;" id="deleteLocationName">-</div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-danger" type="submit">Excluir</button>
+        <button class="btn" type="button" onclick="closeModal('modalLocationDelete')">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- ======================================================
+     MODAL: Novo Setor (LOCALIZAÇÃO FIXA)
+====================================================== -->
+<div id="modalSectorNew" class="modal-backdrop" aria-hidden="true">
+  <div class="modal card" role="dialog" aria-modal="true" aria-labelledby="modalSectorNewTitle">
+    <div class="modal-header">
+      <div>
+        <div id="modalSectorNewTitle" style="font-weight:900;font-size:1.1rem;">Novo Setor</div>
+        <div class="muted small">A localização é definida pelo botão “+ Setor” que você clicou.</div>
+      </div>
+      <button class="btn" type="button" onclick="closeModal('modalSectorNew')">Fechar</button>
+    </div>
+
+    <form method="post" action="{{ url_for('main.unified_sector_create') }}" class="modal-body">
+      <!-- ✅ location_id fixo (enviado no POST) -->
+      <input type="hidden" name="location_id" id="sector_location_id_fixed" value="">
+
+      <div>
+        <label class="muted small">Localização *</label>
+        <!-- ✅ apenas exibição (travada) -->
+        <input id="sector_location_name_fixed" class="input" value="" readonly>
+      </div>
+
+      <div>
+        <label class="muted small">Nome do setor *</label>
+        <input class="input" name="name" placeholder="Ex.: Administrativo" required>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-orange" type="submit">Salvar</button>
+        <button class="btn" type="button" onclick="closeModal('modalSectorNew')">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- ======================================================
+     MODAL: Editar Setor (COM LOCALIZAÇÃO)
+====================================================== -->
+<div id="modalSectorEdit" class="modal-backdrop" aria-hidden="true">
+  <div class="modal card" role="dialog" aria-modal="true" aria-labelledby="modalSectorEditTitle">
+    <div class="modal-header">
+      <div>
+        <div id="modalSectorEditTitle" style="font-weight:900;font-size:1.1rem;">Editar Setor</div>
+        <div class="muted small">Altere o nome e/ou a localização.</div>
+      </div>
+      <button class="btn" type="button" onclick="closeModal('modalSectorEdit')">Fechar</button>
+    </div>
+
+    <form id="editSectorForm" method="post" action="{{ url_for('main.unified_sector_update', sector_id=0) }}" class="modal-body">
+      <div>
+        <label class="muted small">Localização *</label>
+        <select id="edit_sector_location" class="input" name="location_id" required>
+          <option value="">Selecione...</option>
+          {% for loc in locations %}
+            <option value="{{ loc.id }}">{{ loc.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label class="muted small">Nome do setor *</label>
+        <input id="edit_sector_name" class="input" name="name" required>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-orange" type="submit">Salvar alterações</button>
+        <button class="btn" type="button" onclick="closeModal('modalSectorEdit')">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- ======================================================
+     MODAL: CONFIRMAR EXCLUSÃO (SETOR)
+====================================================== -->
+<div id="modalSectorDelete" class="modal-backdrop" aria-hidden="true">
+  <div class="modal card" role="dialog" aria-modal="true" aria-labelledby="modalSectorDeleteTitle">
+    <div class="modal-header">
+      <div>
+        <div id="modalSectorDeleteTitle" style="font-weight:900;font-size:1.1rem;">Confirmar exclusão</div>
+        <div class="muted small">Esta ação não poderá ser desfeita.</div>
+      </div>
+      <button class="btn" type="button" onclick="closeModal('modalSectorDelete')">Fechar</button>
+    </div>
+
+    <!-- action preenchido via JS -->
+    <form id="deleteSectorForm" method="post" class="modal-body" action="">
+      <div class="card" style="padding:12px;border-radius:16px;border:1px solid rgba(239,68,68,.25);">
+        <div class="muted small">Setor</div>
+        <div style="font-weight:950;font-size:1.05rem;margin-top:6px;" id="deleteSectorName">-</div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-danger" type="submit">Excluir</button>
+        <button class="btn" type="button" onclick="closeModal('modalSectorDelete')">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<script>
+function openModal(id){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.classList.add("show");
+  el.setAttribute("aria-hidden","false");
+  const firstInput = el.querySelector("input, select, textarea");
+  if(firstInput) firstInput.focus();
+}
+
+function closeModal(id){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.classList.remove("show");
+  el.setAttribute("aria-hidden","true");
+}
+
+function openEditLocation(btn){
+  const id = btn.dataset.id;
+  document.getElementById("edit_loc_name").value = btn.dataset.name || "";
+  document.getElementById("edit_loc_address").value = btn.dataset.address || "";
+  document.getElementById("edit_loc_notes").value = btn.dataset.notes || "";
+
+  const form = document.getElementById("editLocationForm");
+  form.action = "{{ url_for('main.locations_update', location_id=0) }}".replace("/0/", "/" + id + "/");
+
+  openModal("modalLocationEdit");
+}
+
+function openDeleteLocationModal(actionUrl, locationName){
+  document.getElementById("deleteLocationForm").action = actionUrl;
+  document.getElementById("deleteLocationName").textContent = locationName || "-";
+  openModal("modalLocationDelete");
+}
+
+/* ✅ Abre o modal de novo setor com a localização FIXA */
+function openSectorModalForLocation(locationId, locationName){
+  const hid = document.getElementById("sector_location_id_fixed");
+  if(hid) hid.value = String(locationId);
+
+  const show = document.getElementById("sector_location_name_fixed");
+  if(show) show.value = locationName || "";
+
+  openModal("modalSectorNew");
+}
+
+/* ✅ Editar setor clicando no badge */
+function openEditSectorFromBadge(btn){
+  openEditSector(btn);
+}
+
+function openEditSector(btn){
+  const id = btn.dataset.id;
+  document.getElementById("edit_sector_name").value = btn.dataset.name || "";
+  const locId = btn.dataset.locationId || "";
+
+  const sel = document.getElementById("edit_sector_location");
+  if(sel){
+    sel.value = String(locId);
+  }
+
+  const form = document.getElementById("editSectorForm");
+  form.action = "{{ url_for('main.unified_sector_update', sector_id=0) }}".replace("/0", "/" + id);
+
+  openModal("modalSectorEdit");
+}
+
+function openDeleteSectorModal(actionUrl, sectorName){
+  document.getElementById("deleteSectorForm").action = actionUrl;
+  document.getElementById("deleteSectorName").textContent = sectorName || "-";
+  openModal("modalSectorDelete");
+}
+
+document.addEventListener("keydown", (e) => {
+  if(e.key === "Escape"){
+    [
+      "modalLocationNew","modalLocationEdit","modalLocationDelete",
+      "modalSectorNew","modalSectorEdit","modalSectorDelete"
+    ].forEach(closeModal);
+  }
+});
+
+document.addEventListener("click", (e) => {
+  const ids = [
+    "modalLocationNew","modalLocationEdit","modalLocationDelete",
+    "modalSectorNew","modalSectorEdit","modalSectorDelete"
+  ];
+  for(const id of ids){
+    const backdrop = document.getElementById(id);
+    if(backdrop && backdrop.classList.contains("show") && e.target === backdrop){
+      closeModal(id);
+    }
+  }
+});
+</script>
+
+{% endblock %}
