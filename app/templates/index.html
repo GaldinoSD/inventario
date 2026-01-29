@@ -9,7 +9,6 @@
   overflow:hidden;
   max-width:100%;
 ">
-  <!-- glows (ok), mas o container está com overflow hidden -->
   <div aria-hidden="true" style="position:absolute;inset:-140px auto auto -140px;width:320px;height:320px;background:rgba(255,106,0,.14);filter:blur(50px);border-radius:999px;"></div>
   <div aria-hidden="true" style="position:absolute;inset:-180px -180px auto auto;width:380px;height:380px;background:rgba(255,106,0,.08);filter:blur(60px);border-radius:999px;"></div>
 
@@ -23,7 +22,7 @@
   </div>
 
   <!-- Totais (responsivo) -->
-  <div style="
+  <div data-grid="totals" style="
     position:relative;
     display:grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -55,12 +54,10 @@
     </div>
   </div>
 
-  <!-- ✅ CSS inline só para este template (resolve o overflow no mobile) -->
+  <!-- ✅ CSS inline só para este template -->
   <style>
-    /* impede qualquer scroll horizontal no conteúdo desta página */
     .page { overflow-x: hidden; }
 
-    /* Totais: 3 -> 2 -> 1 colunas */
     @media (max-width: 980px){
       .dash-totals{ grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
     }
@@ -68,22 +65,26 @@
       .dash-totals{ grid-template-columns: 1fr !important; }
     }
 
-    /* Colunas principais: 2 -> 1 */
     @media (max-width: 980px){
       .dash-two{ grid-template-columns: 1fr !important; }
     }
 
-    /* grids internos: 2 -> 1 */
     @media (max-width: 560px){
       .dash-inner{ grid-template-columns: 1fr !important; }
+    }
+
+    /* ✅ garante que cards “parecidos com link” não tenham comportamento clicável */
+    .dash-card{
+      cursor: default !important;
+      text-decoration: none !important;
+      color: inherit !important;
     }
   </style>
 
 </section>
 
 <script>
-  // aplica classes nos grids acima (sem reescrever tudo)
-  // (safe: executa rápido e evita ter que repetir css em todo lugar)
+  // aplica classes nos grids
   (function(){
     const totals = document.querySelectorAll('[data-grid="totals"]');
     totals.forEach(el => el.classList.add('dash-totals'));
@@ -117,9 +118,8 @@
       max-width:100%;
     ">
       {% for row in by_sector %}
-        <a
-          href="{{ url_for('main.equipments_list', sector_id=row.id) }}"
-          class="card"
+        <div
+          class="card dash-card"
           style="
             padding:18px;
             border-radius:20px;
@@ -134,7 +134,7 @@
             {{ row.count }}
           </div>
           <div class="muted small" style="margin-top:8px;">Equipamentos</div>
-        </a>
+        </div>
       {% else %}
         <div class="muted small">Nenhum setor cadastrado.</div>
       {% endfor %}
@@ -154,9 +154,8 @@
       max-width:100%;
     ">
       {% for row in by_location %}
-        <a
-          href="{{ url_for('main.equipments_list', location_id=row.id) }}"
-          class="card"
+        <div
+          class="card dash-card"
           style="
             padding:18px;
             border-radius:20px;
@@ -171,7 +170,7 @@
             {{ row.count }}
           </div>
           <div class="muted small" style="margin-top:8px;">Equipamentos</div>
-        </a>
+        </div>
       {% else %}
         <div class="muted small">Nenhuma localização cadastrada.</div>
       {% endfor %}
@@ -179,15 +178,5 @@
   </section>
 
 </section>
-
-<script>
-  // marca o grid de totais (primeiro grid dentro do hero)
-  (function(){
-    const hero = document.querySelector('section.card');
-    if(!hero) return;
-    const grids = hero.querySelectorAll('div[style*="display:grid"]');
-    if(grids && grids[0]) grids[0].setAttribute('data-grid','totals');
-  })();
-</script>
 
 {% endblock %}

@@ -1,0 +1,623 @@
+{% extends "base.html" %}
+{% block title %}Almoxarifado{% endblock %}
+
+{% block content %}
+<div class="page-head" style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+  <div>
+    <h1 style="margin:0; font-weight:900;">Almoxarifado</h1>
+    <div class="muted small">Controle de estoque (materiais e ferramentas)</div>
+  </div>
+
+  <div style="display:flex; gap:10px; flex-wrap:wrap;">
+    <button class="btn btn-orange" type="button" onclick="openModal('modalAddItem')">Cadastrar item</button>
+    <button class="btn" type="button" onclick="openModal('modalHistorico')">Histórico</button>
+  </div>
+</div>
+
+<!-- ===================== PESQUISA (ESTOQUE) ===================== -->
+<div class="card" style="margin-top:14px; padding:14px;">
+  <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+    <div style="font-weight:900;">Pesquisar item</div>
+    <div class="muted small">Filtra a lista de estoque</div>
+  </div>
+
+  <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;">
+    <input id="stockSearch" class="input" placeholder="Digite nome ou ID do item..." style="flex:1 1 280px;">
+    <button class="btn" type="button" onclick="clearStockSearch()">Limpar</button>
+  </div>
+</div>
+
+<!-- ===================== ESTOQUE ===================== -->
+<div class="card" style="margin-top:14px; padding:14px;">
+  <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+    <div style="font-weight:900;">Estoque geral</div>
+    <div class="muted small">Clique no item para editar / registrar entrada / saída</div>
+  </div>
+
+  <div style="margin-top:10px; overflow:auto; max-height:56vh; border:1px solid rgba(255,255,255,.08); border-radius:12px;">
+    <table class="table" style="width:100%; border-collapse:collapse;">
+      <thead style="position:sticky; top:0; background:rgba(0,0,0,.35); backdrop-filter: blur(8px); z-index:1;">
+        <tr>
+          <th style="text-align:left;">Item</th>
+          <th style="text-align:right; width:140px;">Quantidade</th>
+        </tr>
+      </thead>
+      <tbody id="stockBody">
+        {% if items and items|length > 0 %}
+          {% for it in items %}
+            <tr
+              class="stock-row"
+              style="cursor:pointer;"
+              onclick="openItemModal(this)"
+              data-id="{{ it.id }}"
+              data-name="{{ it.name }}"
+              data-qty="{{ it.qty }}"
+            >
+              <td style="padding:10px 8px;">
+                <div style="font-weight:800;">{{ it.name }}</div>
+                <div class="muted small">ID: {{ it.id }}</div>
+              </td>
+              <td style="padding:10px 8px; text-align:right; font-weight:900;">
+                {{ it.qty }}
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="2" style="padding:12px;" class="muted">
+              Nenhum item cadastrado ainda.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  <div id="stockEmpty" class="muted small" style="display:none; margin-top:10px;">
+    Nenhum item encontrado com esse filtro.
+  </div>
+</div>
+
+<!-- ===================== MODAL: CADASTRAR ITEM ===================== -->
+<div class="modal-backdrop" id="modalAddItem" aria-hidden="true">
+  <div class="modal card modal-md" role="dialog" aria-modal="true" aria-labelledby="addTitle">
+    <div class="modal-header">
+      <div>
+        <div id="addTitle" style="font-weight:900;">Cadastrar item</div>
+        <div class="muted small">Nome + quantidade (entrada no estoque)</div>
+      </div>
+      <button class="btn" type="button" onclick="closeModal('modalAddItem')">Fechar</button>
+    </div>
+
+    <div class="modal-body">
+      <form method="POST" action="{{ url_for('main.almoxarifado_add_item') }}" class="form-grid">
+        <div class="field col-8">
+          <label>Nome do item</label>
+          <input class="input" name="name" placeholder="Ex: Saco de cimento, Alicate..." required>
+        </div>
+
+        <div class="field col-4">
+          <label>Quantidade</label>
+          <input class="input" name="qty" type="number" min="1" step="1" value="1" required>
+        </div>
+
+        <div class="field col-12 actions" style="display:flex; justify-content:flex-end; gap:10px;">
+          <button class="btn btn-orange" type="submit">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL ITEM (PADRÃO ÚNICO) ===================== -->
+<div class="modal-backdrop" id="modalItem" aria-hidden="true">
+  <div class="modal card modal-lg"
+       role="dialog" aria-modal="true" aria-labelledby="itemTitle"
+       style="max-height:92vh; display:flex; flex-direction:column;">
+
+    <div class="modal-header" style="flex:0 0 auto;">
+      <div style="display:flex; flex-direction:column; gap:4px;">
+        <div id="itemTitle" style="font-weight:900;">Item</div>
+        <div class="muted small" id="itemSub">Gerenciar estoque</div>
+
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
+          <span class="badge" id="it_id_badge">ID: -</span>
+          <span class="badge" id="it_stock_badge">Estoque: -</span>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:10px; align-items:center;">
+        <button class="btn btn-danger" type="button" onclick="toggleDelete()">Excluir</button>
+        <button class="btn" type="button" onclick="closeModal('modalItem')">Fechar</button>
+      </div>
+    </div>
+
+    <div class="modal-body" style="flex:1 1 auto; overflow:auto; padding-bottom:14px;">
+
+      <!-- Tabs -->
+      <div class="card" style="padding:10px; margin-bottom:12px;">
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+          <button class="btn btn-orange" type="button" id="tabEntrada" onclick="setMode('ENTRADA')">Entrada</button>
+          <button class="btn" type="button" id="tabSaida" onclick="setMode('SAIDA')">Saída</button>
+          <button class="btn" type="button" id="tabEditar" onclick="setMode('EDITAR_NOME')">Editar nome</button>
+          <div style="flex:1 1 auto;"></div>
+          <div class="muted small" id="modeHint">Adicionar quantidade ao estoque</div>
+        </div>
+      </div>
+
+      <!-- ✅ PAINEL PADRÃO ÚNICO -->
+      <div class="card" style="padding:14px; margin-bottom:12px;">
+        <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:flex-start;">
+          <div>
+            <div style="font-weight:900;" id="modeTitle">Registrar entrada</div>
+            <div class="muted small" id="modeSubtitle">Soma no estoque</div>
+          </div>
+        </div>
+
+        <!-- ✅ UM FORM PRA TUDO -->
+        <form method="POST" action="{{ url_for('main.almoxarifado_movimento') }}"
+              class="form-grid" style="margin-top:12px;">
+          <input type="hidden" name="item_id" id="u_item_id">
+          <input type="hidden" name="type" id="u_type" value="ENTRADA">
+
+          <!-- Campo: nome (só no editar) -->
+          <div class="field col-12" id="wrap_name" style="display:none;">
+            <label>Novo nome</label>
+            <input class="input" name="name" id="u_name" placeholder="Digite o novo nome..." />
+            <div class="muted small">Apenas renomeia (não altera estoque)</div>
+          </div>
+
+          <!-- Campo: tipo da saída (só no modo SAIDA) -->
+          <div class="field col-4" id="wrap_saida_tipo" style="display:none;">
+            <label>Tipo</label>
+            <select class="input" name="subtype" id="u_saida_tipo">
+              <option value="USO">SAÍDA (uso)</option>
+              <option value="PERDA">PERDA</option>
+              <option value="DANO">DANIFICADO</option>
+            </select>
+          </div>
+
+          <!-- Campo: quantidade (Entrada + Saída) -->
+          <div class="field col-4" id="wrap_qty">
+            <label>Quantidade</label>
+            <input class="input" name="qty" id="u_qty" type="number" min="1" step="1" value="1">
+            <div class="muted small" id="u_qty_warn" style="display:none; margin-top:6px;">Quantidade maior que o estoque.</div>
+          </div>
+
+          <!-- Campo: estoque atual (só na Saída) -->
+          <div class="field col-4" id="wrap_stock" style="display:none;">
+            <label>Estoque atual</label>
+            <input class="input" id="u_stock" type="text" value="-" readonly>
+          </div>
+
+          <!-- Campo: motivo -->
+          <div class="field col-8" id="wrap_motivo">
+            <label>Motivo <span class="muted small" id="motivoHint">(opcional)</span></label>
+            <input class="input" name="motivo" id="u_motivo" placeholder="Ex: compra, reposição, instalação..." />
+          </div>
+
+          <!-- Campo: local (só na saída, opcional) -->
+          <div class="field col-4" id="wrap_local" style="display:none;">
+            <label>Local (opcional)</label>
+            <input class="input" name="local" id="u_local" placeholder="Ex: Obra X / POP Y..." />
+          </div>
+
+          <div class="field col-12 actions" style="display:flex; justify-content:flex-end; gap:10px;">
+            <button class="btn btn-orange" id="u_submit" type="submit">Registrar</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Excluir (colapsável) -->
+      <div id="paneDelete" class="card" style="padding:14px; display:none;">
+        <div style="font-weight:900;">Excluir item</div>
+        <div class="muted small">Isso remove também o histórico dele.</div>
+
+        <form method="POST" action="{{ url_for('main.almoxarifado_item_delete') }}"
+              onsubmit="return confirm('Excluir este item? Isso remove também o histórico dele.');"
+              style="margin-top:10px;">
+          <input type="hidden" name="item_id" id="del_item_id">
+          <button class="btn btn-danger" type="submit" style="width:100%;">Confirmar exclusão</button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL: HISTÓRICO ===================== -->
+<div class="modal-backdrop" id="modalHistorico" aria-hidden="true">
+  <div class="modal card modal-lg" role="dialog" aria-modal="true" aria-labelledby="histTitle">
+    <div class="modal-header">
+      <div>
+        <div id="histTitle" style="font-weight:900;">Histórico de movimentações</div>
+        <div class="muted small">Pesquise e clique em uma linha para ver detalhes</div>
+      </div>
+      <button class="btn" type="button" onclick="closeModal('modalHistorico')">Fechar</button>
+    </div>
+
+    <div class="modal-body">
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+        <input id="histSearch" class="input" placeholder="Pesquisar no histórico (item, tipo, local, motivo...)" style="flex:1 1 320px;">
+        <button class="btn" type="button" onclick="clearHistSearch()">Limpar</button>
+      </div>
+
+      <div style="overflow:auto; max-height:60vh; border:1px solid rgba(255,255,255,.08); border-radius:12px;">
+        <table class="table" style="width:100%; border-collapse:collapse;">
+          <thead style="position:sticky; top:0; background:rgba(0,0,0,.35); backdrop-filter: blur(8px); z-index:1;">
+            <tr>
+              <th style="text-align:left; width:160px;">Data</th>
+              <th style="text-align:left;">Item</th>
+              <th style="text-align:left; width:120px;">Tipo</th>
+              <th style="text-align:right; width:90px;">Qtd</th>
+              <th style="text-align:left;">Local</th>
+              <th style="text-align:left;">Motivo</th>
+            </tr>
+          </thead>
+
+          <tbody id="histBody">
+            {% if movements and movements|length > 0 %}
+              {% for m in movements %}
+                <tr
+                  class="hist-row"
+                  style="cursor:pointer;"
+                  onclick="openMovementDetail(this)"
+                  data-date="{{ m.created_at.strftime('%d/%m/%Y %H:%M') if m.created_at else '-' }}"
+                  data-item="{{ m.item_name }}"
+                  data-type="{{ m.type }}"
+                  data-qty="{{ m.qty }}"
+                  data-local="{{ m.local or '-' }}"
+                  data-motivo="{{ m.motivo or '-' }}"
+                  data-itemid="{{ m.item_id }}"
+                  data-search="{{ (m.item_name ~ ' ' ~ m.type ~ ' ' ~ (m.local or '') ~ ' ' ~ (m.motivo or '') ~ ' ' ~ (m.item_id|string))|lower }}"
+                >
+                  <td style="padding:10px 8px;" class="muted small">
+                    {{ m.created_at.strftime('%d/%m/%Y %H:%M') if m.created_at else '-' }}
+                  </td>
+                  <td style="padding:10px 8px;">
+                    <div style="font-weight:800;">{{ m.item_name }}</div>
+                    <div class="muted small">Item ID: {{ m.item_id }}</div>
+                  </td>
+                  <td style="padding:10px 8px;">
+                    <span class="badge">{{ m.type }}</span>
+                  </td>
+                  <td style="padding:10px 8px; text-align:right; font-weight:900;">
+                    {{ m.qty }}
+                  </td>
+                  <td style="padding:10px 8px;" class="muted">
+                    {{ m.local or '-' }}
+                  </td>
+                  <td style="padding:10px 8px;" class="muted">
+                    {{ m.motivo or '-' }}
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="6" style="padding:12px;" class="muted">
+                  Sem movimentações registradas ainda.
+                </td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+
+      <div id="histEmpty" class="muted small" style="display:none; margin-top:10px;">
+        Nenhum registro encontrado com esse filtro.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL: DETALHE DO HISTÓRICO ===================== -->
+<div class="modal-backdrop" id="modalMovDetail" aria-hidden="true">
+  <div class="modal card modal-md" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+    <div class="modal-header">
+      <div>
+        <div id="detailTitle" style="font-weight:900;">Detalhe da movimentação</div>
+        <div class="muted small">Informações registradas</div>
+      </div>
+      <button class="btn" type="button" onclick="closeModal('modalMovDetail')">Fechar</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="card" style="padding:14px; display:grid; gap:10px;">
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <span class="badge" id="d_type">Tipo: -</span>
+          <span class="badge" id="d_qty">Qtd: -</span>
+          <span class="badge" id="d_date">Data: -</span>
+        </div>
+
+        <div style="display:grid; gap:6px;">
+          <div style="font-weight:900; font-size:1.05rem;" id="d_item">Item: -</div>
+          <div class="muted small" id="d_itemid">Item ID: -</div>
+          <div class="muted small" id="d_local">Local: -</div>
+          <div class="muted small" id="d_motivo">Motivo: -</div>
+        </div>
+      </div>
+
+      <div class="modal-actions" style="margin-top:12px; display:flex; justify-content:flex-end; gap:10px;">
+        <button class="btn" type="button" onclick="closeModal('modalMovDetail')">Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function openModal(id){
+    const m = document.getElementById(id);
+    if(!m) return;
+    m.classList.add("show");
+    m.setAttribute("aria-hidden", "false");
+  }
+
+  function closeModal(id){
+    const m = document.getElementById(id);
+    if(!m) return;
+    m.classList.remove("show");
+    m.setAttribute("aria-hidden", "true");
+  }
+
+  document.addEventListener("click", (e) => {
+    const backdrops = ["modalAddItem","modalHistorico","modalMovDetail","modalItem"];
+    backdrops.forEach(id => {
+      const el = document.getElementById(id);
+      if(el && el.classList.contains("show") && e.target === el){
+        closeModal(id);
+      }
+    });
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if(e.key !== "Escape") return;
+    ["modalAddItem","modalHistorico","modalMovDetail","modalItem"].forEach(closeModal);
+  });
+
+  // ===================== MODAL DO ITEM (PADRÃO ÚNICO) =====================
+  let CURRENT_STOCK = 0;
+  let CURRENT_MODE = "ENTRADA";
+
+  const el = (id) => document.getElementById(id);
+
+  function setActiveTab(mode){
+    const map = {
+      ENTRADA: el("tabEntrada"),
+      SAIDA: el("tabSaida"),
+      EDITAR_NOME: el("tabEditar"),
+    };
+    Object.keys(map).forEach(k => {
+      const b = map[k];
+      if(!b) return;
+      if(k === mode){
+        b.classList.add("btn-orange");
+      }else{
+        b.classList.remove("btn-orange");
+        b.classList.add("btn");
+      }
+    });
+  }
+
+  function setMode(mode){
+    CURRENT_MODE = mode;
+    setActiveTab(mode);
+
+    // texts
+    const title = el("modeTitle");
+    const sub = el("modeSubtitle");
+    const hint = el("modeHint");
+    const submit = el("u_submit");
+    const motivoHint = el("motivoHint");
+
+    // wrappers
+    const wName = el("wrap_name");
+    const wTipo = el("wrap_saida_tipo");
+    const wQty  = el("wrap_qty");
+    const wStock = el("wrap_stock");
+    const wMotivo = el("wrap_motivo");
+    const wLocal = el("wrap_local");
+
+    // fields
+    const uType = el("u_type");
+    const uQty = el("u_qty");
+    const uName = el("u_name");
+    const uMotivo = el("u_motivo");
+    const uLocal = el("u_local");
+
+    // reset requireds
+    uQty.required = false;
+    uName.required = false;
+
+    // default show/hide
+    wName.style.display = "none";
+    wTipo.style.display = "none";
+    wQty.style.display = "none";
+    wStock.style.display = "none";
+    wMotivo.style.display = "none";
+    wLocal.style.display = "none";
+
+    if(mode === "ENTRADA"){
+      uType.value = "ENTRADA";
+      if(title) title.textContent = "Registrar entrada";
+      if(sub) sub.textContent = "Soma no estoque";
+      if(hint) hint.textContent = "Adicionar quantidade ao estoque";
+      if(submit) submit.textContent = "Registrar entrada";
+      if(motivoHint) motivoHint.textContent = "(opcional)";
+
+      wQty.style.display = "";
+      wMotivo.style.display = "";
+
+      uQty.required = true;
+      uQty.value = 1;
+      uMotivo.placeholder = "Ex: compra, reposição...";
+      uLocal.value = "";
+      updateRules();
+
+    }else if(mode === "SAIDA"){
+      uType.value = "SAIDA";
+      if(title) title.textContent = "Registrar saída";
+      if(sub) sub.textContent = "Subtrai do estoque";
+      if(hint) hint.textContent = "Subtrair do estoque (uso / perda / danificado)";
+      if(submit) submit.textContent = "Registrar saída";
+      if(motivoHint) motivoHint.textContent = "(obrigatório)";
+
+      wTipo.style.display = "";
+      wQty.style.display = "";
+      wStock.style.display = "";
+      wMotivo.style.display = "";
+      wLocal.style.display = "";
+
+      uQty.required = true;
+      uMotivo.required = true;
+
+      el("u_stock").value = CURRENT_STOCK;
+      uQty.value = 1;
+      uMotivo.placeholder = "Ex: instalação, extravio, quebrou...";
+      updateRules();
+
+    }else{ // EDITAR_NOME
+      uType.value = "EDITAR_NOME";
+      if(title) title.textContent = "Editar nome do item";
+      if(sub) sub.textContent = "Não altera o estoque";
+      if(hint) hint.textContent = "Renomear o item";
+      if(submit) submit.textContent = "Salvar nome";
+      if(motivoHint) motivoHint.textContent = "(opcional)";
+
+      wName.style.display = "";
+      wMotivo.style.display = ""; // se quiser tirar motivo do editar, é só deixar display none
+
+      uName.required = true;
+      uName.value = el("itemTitle").textContent || "";
+      uMotivo.placeholder = "Opcional: motivo da alteração...";
+      updateRules();
+    }
+  }
+
+  function toggleDelete(){
+    const p = el("paneDelete");
+    if(!p) return;
+    p.style.display = (p.style.display === "none" || !p.style.display) ? "" : "none";
+  }
+
+  function openItemModal(row){
+    const id = row.dataset.id;
+    const name = row.dataset.name;
+    const qty = Number(row.dataset.qty || "0");
+
+    CURRENT_STOCK = qty;
+
+    el("itemTitle").textContent = name;
+    el("itemSub").textContent = "Gerenciar estoque";
+    el("it_id_badge").textContent = "ID: " + id;
+    el("it_stock_badge").textContent = "Estoque: " + qty;
+
+    // hidden item id (form único)
+    el("u_item_id").value = id;
+
+    // delete
+    el("del_item_id").value = id;
+    const delPane = el("paneDelete");
+    if(delPane) delPane.style.display = "none";
+
+    // abre padrão em entrada
+    setMode("ENTRADA");
+    openModal("modalItem");
+  }
+
+  // ===================== REGRAS (validar saída) =====================
+  const uQty = document.getElementById("u_qty");
+  const uWarn = document.getElementById("u_qty_warn");
+  const uSubmit = document.getElementById("u_submit");
+
+  function updateRules(){
+    if(CURRENT_MODE !== "SAIDA"){
+      if(uWarn) uWarn.style.display = "none";
+      if(uSubmit) uSubmit.disabled = false;
+      return;
+    }
+    const q = Number((uQty && uQty.value) ? uQty.value : "0");
+    const tooMuch = q > CURRENT_STOCK;
+
+    if(uWarn) uWarn.style.display = tooMuch ? "" : "none";
+    if(uSubmit) uSubmit.disabled = tooMuch;
+  }
+
+  if(uQty) uQty.addEventListener("input", updateRules);
+
+  // ===================== DETALHE DO HISTÓRICO =====================
+  function openMovementDetail(row){
+    const date = row.dataset.date || "-";
+    const item = row.dataset.item || "-";
+    const type = row.dataset.type || "-";
+    const qty = row.dataset.qty || "-";
+    const local = row.dataset.local || "-";
+    const motivo = row.dataset.motivo || "-";
+    const itemid = row.dataset.itemid || "-";
+
+    document.getElementById("d_type").textContent = "Tipo: " + type;
+    document.getElementById("d_qty").textContent = "Qtd: " + qty;
+    document.getElementById("d_date").textContent = "Data: " + date;
+
+    document.getElementById("d_item").textContent = "Item: " + item;
+    document.getElementById("d_itemid").textContent = "Item ID: " + itemid;
+    document.getElementById("d_local").textContent = "Local: " + local;
+    document.getElementById("d_motivo").textContent = "Motivo: " + motivo;
+
+    openModal("modalMovDetail");
+  }
+
+  // ===================== PESQUISA ESTOQUE =====================
+  const stockSearch = document.getElementById("stockSearch");
+  const stockRows = () => Array.from(document.querySelectorAll(".stock-row"));
+  const stockEmpty = document.getElementById("stockEmpty");
+
+  function applyStockFilter(){
+    const q = (stockSearch.value || "").trim().toLowerCase();
+    let visible = 0;
+
+    stockRows().forEach(r => {
+      const id = (r.dataset.id || "").toLowerCase();
+      const name = (r.dataset.name || "").toLowerCase();
+      const ok = !q || id.includes(q) || name.includes(q);
+      r.style.display = ok ? "" : "none";
+      if(ok) visible++;
+    });
+
+    if(stockEmpty) stockEmpty.style.display = (q && visible === 0) ? "" : "none";
+  }
+
+  function clearStockSearch(){
+    stockSearch.value = "";
+    applyStockFilter();
+  }
+
+  if(stockSearch) stockSearch.addEventListener("input", applyStockFilter);
+
+  // ===================== PESQUISA HISTÓRICO =====================
+  const histSearch = document.getElementById("histSearch");
+  const histRows = () => Array.from(document.querySelectorAll(".hist-row"));
+  const histEmpty = document.getElementById("histEmpty");
+
+  function applyHistFilter(){
+    const q = (histSearch.value || "").trim().toLowerCase();
+    let visible = 0;
+
+    histRows().forEach(r => {
+      const search = (r.dataset.search || "");
+      const ok = !q || search.includes(q);
+      r.style.display = ok ? "" : "none";
+      if(ok) visible++;
+    });
+
+    if(histEmpty) histEmpty.style.display = (q && visible === 0) ? "" : "none";
+  }
+
+  function clearHistSearch(){
+    histSearch.value = "";
+    applyHistFilter();
+  }
+
+  if(histSearch) histSearch.addEventListener("input", applyHistFilter);
+</script>
+
+{% endblock %}

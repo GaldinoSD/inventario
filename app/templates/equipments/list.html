@@ -59,7 +59,7 @@
         <th class="muted">PAT/Código</th>
         <th class="muted">NF</th>
         <th class="muted">Valor</th>
-        <th style="width:190px;">Ações</th>
+        <th style="width:240px;">Ações</th>
       </tr>
     </thead>
     <tbody>
@@ -73,7 +73,22 @@
           <td>{{ e.location.name }}</td>
           <td>{{ e.sector.name }}</td>
           <td class="muted">{{ e.barcode_pat }}</td>
-          <td class="muted">{{ e.invoice_nf or '-' }}</td>
+
+          <td class="muted">
+            {{ e.invoice_nf or '-' }}
+            {% if e.invoice_file %}
+              <div style="margin-top:6px;">
+                <button
+                  class="btn"
+                  type="button"
+                  onclick="openInvoicePreview('{{ url_for('static', filename='uploads/nf/' ~ e.invoice_file) }}', '{{ (e.invoice_mime or '')|e }}')"
+                >
+                  Ver NF
+                </button>
+              </div>
+            {% endif %}
+          </td>
+
           <td class="muted">
             {% if e.value is not none %}
               R$ {{ "%.2f"|format(e.value) }}
@@ -81,6 +96,7 @@
               -
             {% endif %}
           </td>
+
           <td>
             <button
               class="btn"
@@ -116,6 +132,35 @@
 </div>
 
 <!-- ======================================================
+     MODAL: PREVIEW NF (Imagem/PDF)
+====================================================== -->
+<div id="modalInvoicePreview" class="modal-backdrop" aria-hidden="true">
+  <div class="modal card modal-lg" role="dialog" aria-modal="true" aria-labelledby="modalInvoiceTitle">
+    <div class="modal-header">
+      <div>
+        <div id="modalInvoiceTitle" style="font-weight:900;font-size:1.1rem;">Nota fiscal</div>
+        <div class="muted small">Visualização do arquivo vinculado</div>
+      </div>
+      <button class="btn" type="button" onclick="closeModal('modalInvoicePreview')">Fechar</button>
+    </div>
+
+    <!-- ✅ classe nf-preview para o CSS controlar iframe/img -->
+    <div class="modal-body nf-preview">
+      <div id="invoicePreviewBox" class="card" style="padding:12px;border-radius:16px;overflow:hidden;">
+        <!-- conteúdo inserido via JS -->
+      </div>
+
+      <div class="modal-actions" style="margin-top:12px;">
+        <a id="invoiceOpenNewTab" class="btn btn-orange" href="#" target="_blank" rel="noopener">
+          Abrir em nova aba
+        </a>
+        <button class="btn" type="button" onclick="closeModal('modalInvoicePreview')">Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================
      MODAL: NOVO EQUIPAMENTO
 ====================================================== -->
 <div id="modalEquipmentNew" class="modal-backdrop" aria-hidden="true">
@@ -128,7 +173,7 @@
       <button class="btn" type="button" onclick="closeModal('modalEquipmentNew')">Fechar</button>
     </div>
 
-    <form method="post" action="{{ url_for('main.equipments_create') }}" class="modal-body">
+    <form method="post" action="{{ url_for('main.equipments_create') }}" class="modal-body" enctype="multipart/form-data">
       <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;">
         <div>
           <label class="muted small">Nome *</label>
@@ -151,8 +196,15 @@
         </div>
         <div>
           <label class="muted small">PAT / Código de barras *</label>
-          <!-- ✅ ID para preencher via câmera -->
           <input id="new_barcode_pat" class="input" name="barcode_pat" placeholder="Ex.: 7890001234567" required>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr;gap:12px;">
+        <div>
+          <label class="muted small">Arquivo da NF (opcional)</label>
+          <input class="input" type="file" name="invoice_image" accept="image/*,.pdf">
+          <div class="muted small" style="margin-top:6px;">Aceita: JPG/PNG/WebP ou PDF.</div>
         </div>
       </div>
 
@@ -202,7 +254,7 @@
       <button class="btn" type="button" onclick="closeModal('modalEquipmentEdit')">Fechar</button>
     </div>
 
-    <form id="editEquipmentForm" method="post" class="modal-body" action="">
+    <form id="editEquipmentForm" method="post" class="modal-body" action="" enctype="multipart/form-data">
       <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;">
         <div>
           <label class="muted small">Nome *</label>
@@ -226,6 +278,14 @@
         <div>
           <label class="muted small">PAT / Código de barras *</label>
           <input id="edit_barcode_pat" class="input" name="barcode_pat" required>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr;gap:12px;">
+        <div>
+          <label class="muted small">Trocar arquivo da NF (opcional)</label>
+          <input class="input" type="file" name="invoice_image" accept="image/*,.pdf">
+          <div class="muted small" style="margin-top:6px;">Se enviar, substitui o arquivo anterior.</div>
         </div>
       </div>
 
@@ -257,7 +317,7 @@
 </div>
 
 <!-- ======================================================
-     MODAL: CONFIRMAR EXCLUSÃO (EXIGE DIGITAR "EXCLUIR")
+     MODAL: CONFIRMAR EXCLUSÃO
 ====================================================== -->
 <div id="modalDeleteConfirm" class="modal-backdrop" aria-hidden="true">
   <div class="modal card" role="dialog" aria-modal="true" aria-labelledby="modalDeleteTitle">
@@ -281,9 +341,7 @@
       <div>
         <label class="muted small">Digite EXCLUIR</label>
         <input id="deleteConfirmInput" class="input" autocomplete="off" placeholder="EXCLUIR">
-        <div class="muted small" style="margin-top:6px;">
-          Isso evita exclusões acidentais.
-        </div>
+        <div class="muted small" style="margin-top:6px;">Isso evita exclusões acidentais.</div>
       </div>
 
       <div class="modal-actions">
@@ -297,10 +355,10 @@
 </div>
 
 <!-- ======================================================
-     MODAL: SCAN PARA CADASTRO (NOVO)
+     MODAL: SCAN PARA CADASTRO
 ====================================================== -->
 <div id="modalScanCreate" class="modal-backdrop" aria-hidden="true">
-  <div class="modal card" role="dialog" aria-modal="true" aria-labelledby="modalScanCreateTitle">
+  <div class="modal card modal-md" role="dialog" aria-modal="true" aria-labelledby="modalScanCreateTitle">
     <div class="modal-header">
       <div>
         <div id="modalScanCreateTitle" style="font-weight:900;font-size:1.1rem;">Cadastro por câmera</div>
@@ -311,7 +369,9 @@
 
     <div class="modal-body">
       <div class="card" style="padding:12px;border-radius:16px;">
-        <div id="scan-create-reader" style="width:100%;"></div>
+        <!-- ✅ limita altura do leitor pra não estourar -->
+        <div id="scan-create-reader" style="width:100%;max-height:60vh;overflow:hidden;border-radius:12px;"></div>
+
         <div id="scanCreateHint" class="muted small" style="margin-top:10px;">
           Se não aparecer a câmera, autorize nas permissões do navegador.
         </div>
@@ -340,13 +400,14 @@
 
 <script>
 /* ==========================
-   Modais (já existiam)
+   Modais (com trava do body)
 ========================== */
 function openModal(id){
   const el = document.getElementById(id);
   if(!el) return;
   el.classList.add("show");
   el.setAttribute("aria-hidden","false");
+  document.body.classList.add("modal-open"); // ✅ trava scroll do fundo
 
   const firstInput = el.querySelector("input, select, textarea");
   if(firstInput) firstInput.focus();
@@ -357,6 +418,41 @@ function closeModal(id){
   if(!el) return;
   el.classList.remove("show");
   el.setAttribute("aria-hidden","true");
+
+  // ✅ se não houver nenhum modal aberto, libera scroll
+  if(!document.querySelector(".modal-backdrop.show")){
+    document.body.classList.remove("modal-open");
+  }
+}
+
+/* ✅ Preview NF (imagem/PDF) */
+function openInvoicePreview(url, mime){
+  const box = document.getElementById("invoicePreviewBox");
+  const openBtn = document.getElementById("invoiceOpenNewTab");
+  if(openBtn) openBtn.href = url;
+
+  const isPdf = (mime || "").toLowerCase().includes("pdf") || /\.pdf(\?|#|$)/i.test(url);
+
+  if(isPdf){
+    // ✅ sem height inline fixo (CSS controla)
+    box.innerHTML = `
+      <iframe
+        src="${url}"
+        title="Nota fiscal (PDF)"
+        style="width:100%;border:0;border-radius:14px;background:rgba(0,0,0,.15);"
+      ></iframe>
+    `;
+  }else{
+    box.innerHTML = `
+      <img
+        src="${url}"
+        alt="Nota fiscal"
+        style="width:100%;display:block;border-radius:14px;"
+      />
+    `;
+  }
+
+  openModal("modalInvoicePreview");
 }
 
 function openEditEquipment(btn){
@@ -454,7 +550,12 @@ async function startScanCreate(){
 
     await scanCreateQr.start(
       { deviceId: { exact: scanCreateCameraId } },
-      { fps: 18, qrbox: { width: 320, height: 220 }, aspectRatio: 1.7777778, disableFlip: true },
+      {
+        fps: 18,
+        qrbox: { width: 320, height: 220 },
+        aspectRatio: 1.7777778,
+        disableFlip: true
+      },
       (decodedText) => {
         if(scanCreateHandling) return;
         scanCreateHandling = true;
@@ -550,12 +651,20 @@ document.addEventListener("keydown", async (e) => {
     closeModal("modalEquipmentNew");
     closeModal("modalEquipmentEdit");
     closeModal("modalDeleteConfirm");
+    closeModal("modalInvoicePreview");
     await closeScanCreateModal();
   }
 });
 
 document.addEventListener("click", async (e) => {
-  const backdrops = ["modalEquipmentNew", "modalEquipmentEdit", "modalDeleteConfirm", "modalScanCreate"];
+  const backdrops = [
+    "modalEquipmentNew",
+    "modalEquipmentEdit",
+    "modalDeleteConfirm",
+    "modalScanCreate",
+    "modalInvoicePreview"
+  ];
+
   for(const id of backdrops){
     const backdrop = document.getElementById(id);
     if(backdrop && backdrop.classList.contains("show") && e.target === backdrop){

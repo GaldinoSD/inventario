@@ -5,6 +5,112 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>{% block title %}Inventário{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+
+  <!-- ✅ Topbar + botões ainda menores -->
+  <style>
+    /* ===== TOPBAR (header) ===== */
+    .topbar{
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      background: rgba(15, 15, 18, .60);
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+
+    /* 🔽 Barra superior ainda mais baixa */
+    .topbar .topbar-inner{
+      padding: 4px 0;
+    }
+
+    /* Logo menor */
+    .brand-icon{
+      border-radius: 14px;
+      padding: 4px 7px;
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.02));
+      border: 1px solid rgba(255,255,255,.10);
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    }
+
+    /* ===== Botões do TOPO ainda menores ===== */
+    .topbar .btn{
+      padding: 5px 9px !important;
+      font-size: .82rem !important;
+      border-radius: 10px !important;
+      line-height: 1 !important;
+      min-height: 30px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      letter-spacing: .2px;
+      box-shadow: 0 10px 24px rgba(0,0,0,.18);
+      border: 1px solid rgba(255,255,255,.10);
+    }
+
+    .topbar .btn:hover{
+      transform: translateY(-1px);
+      filter: brightness(1.02);
+    }
+    .topbar .btn:active{
+      transform: translateY(0px);
+    }
+
+    .nav{
+      gap: 6px !important;
+    }
+
+    /* Responsivo */
+    @media (max-width: 900px){
+      .topbar .topbar-inner{
+        gap: 10px !important;
+        padding: 4px 0;
+      }
+
+      .brand-icon{
+        width: 64px !important;
+        height: 44px !important;
+      }
+      .brand-icon img{
+        height: 44px !important;
+      }
+
+      .topbar .btn{
+        padding: 5px 8px !important;
+        font-size: .80rem !important;
+        border-radius: 10px !important;
+        min-height: 29px;
+      }
+    }
+
+    /* ===== Conteúdo ===== */
+    .main{
+      padding-top: 14px;
+    }
+
+    /* ===== Modais: leve upgrade visual ===== */
+    .modal.card{
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(22,22,26,.92);
+      box-shadow: 0 24px 80px rgba(0,0,0,.55);
+      border-radius: 18px;
+    }
+
+    .modal-header{
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      padding-bottom: 10px;
+    }
+
+    .modal-backdrop.show{
+      background: rgba(0,0,0,.55);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
+    }
+
+    .modal .input{
+      border-radius: 12px;
+    }
+  </style>
 </head>
 
 <body class="app">
@@ -14,31 +120,31 @@
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap:14px;
+      gap:10px;
+      flex-wrap:wrap;
     ">
 
       <!-- ESQUERDA: LOGO -->
       <a href="{{ url_for('main.index') }}" class="brand" style="
         display:flex;
         align-items:center;
-        gap:12px;
+        gap:10px;
         text-decoration:none;
         flex:0 0 auto;
       ">
         <div class="brand-icon" style="
-          width:84px;
-          height:60px;
+          width:68px;
+          height:46px;
           display:flex;
           align-items:center;
           justify-content:center;
-          background:transparent;
           overflow:hidden;
         ">
           <img
             src="{{ url_for('static', filename='logo.png') }}"
             alt="Logo"
             style="
-              height:60px;
+              height:46px;
               width:auto;
               max-width:100%;
               object-fit:contain;
@@ -58,15 +164,13 @@
         display:flex;
         align-items:center;
         justify-content:center;
-        gap:10px;
         flex-wrap:wrap;
         min-width:0;
       ">
         <a class="btn btn-orange" href="{{ url_for('main.index') }}">Inventário</a>
-        <a class="btn btn-orange" href="{{ url_for('main.locations_sectors') }}">
-          Cadastro de Localização
-        </a>
+        <a class="btn btn-orange" href="{{ url_for('main.locations_sectors') }}">Cadastro de Localização</a>
         <a class="btn btn-orange" href="{{ url_for('main.equipments_list') }}">Equipamentos</a>
+        <a class="btn btn-orange" href="{{ url_for('main.almoxarifado') }}">Almoxarifado</a>
 
         <button class="btn btn-orange" type="button" onclick="openScanModal()">
           Pesquisa (Câmera)
@@ -101,7 +205,8 @@
 
   <!-- ===================== MODAL SCAN (CÂMERA) ===================== -->
   <div class="modal-backdrop" id="scanModal" aria-hidden="true">
-    <div class="modal card modal-lg" role="dialog" aria-modal="true" aria-labelledby="scanTitle">
+    <!-- ✅ diminuído: modal-md (igual ao outro) -->
+    <div class="modal card modal-md" role="dialog" aria-modal="true" aria-labelledby="scanTitle">
       <div class="modal-header">
         <div>
           <div id="scanTitle" style="font-weight:900;">Pesquisar por câmera</div>
@@ -112,7 +217,8 @@
 
       <div class="modal-body">
         <div class="card" style="padding:12px;">
-          <div id="qr-reader" style="width:100%;"></div>
+          <!-- ✅ limita altura do leitor para não “estourar” -->
+          <div id="qr-reader" style="width:100%;max-height:60vh;overflow:hidden;border-radius:12px;"></div>
           <div id="scanHint" class="muted small" style="margin-top:10px;">
             Se não aparecer a câmera, autorize nas permissões do navegador.
           </div>
@@ -166,10 +272,8 @@
     </div>
   </div>
 
-  <!-- Lib do scanner -->
   <script src="https://unpkg.com/html5-qrcode" defer></script>
 
-  <!-- JS ORIGINAL (inalterado) -->
   <script>
     let html5QrCode = null;
     let scannerRunning = false;
@@ -200,7 +304,12 @@
 
         await html5QrCode.start(
           { facingMode: "environment" },
-          { fps: 12, qrbox: { width: 250, height: 250 } },
+          {
+            fps: 12,
+            qrbox: { width: 220, height: 220 }, // ✅ menor
+            aspectRatio: 1.7777778,
+            disableFlip: true
+          },
           (decodedText) => handleScanResult(decodedText),
           () => {}
         );
