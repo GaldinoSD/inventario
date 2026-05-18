@@ -2,28 +2,16 @@
 {% block title %}Almoxarifado{% endblock %}
 
 {% block content %}
-<div class="page-head" style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-  <div>
-    <h1 style="margin:0; font-weight:900;">Almoxarifado</h1>
-    <div class="muted small">Controle de estoque (materiais e ferramentas)</div>
+<div class="page-header" style="flex-wrap:wrap;gap:16px;">
+  <div class="page-header-text" style="min-width:220px;">
+    <h1 class="page-title">Almoxarifado</h1>
+    <p class="page-desc">Controle de estoque — materiais e ferramentas da igreja.</p>
   </div>
-
-  <div style="display:flex; gap:10px; flex-wrap:wrap;">
-    <button class="btn btn-orange" type="button" onclick="openModal('modalAddItem')">Cadastrar item</button>
-    <button class="btn" type="button" onclick="openModal('modalHistorico')">Histórico</button>
-  </div>
-</div>
-
-<!-- ===================== PESQUISA (ESTOQUE) ===================== -->
-<div class="card" style="margin-top:14px; padding:14px;">
-  <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
-    <div style="font-weight:900;">Pesquisar item</div>
-    <div class="muted small">Filtra a lista de estoque</div>
-  </div>
-
-  <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;">
-    <input id="stockSearch" class="input" placeholder="Digite nome ou ID do item..." style="flex:1 1 280px;">
-    <button class="btn" type="button" onclick="clearStockSearch()">Limpar</button>
+  <div class="page-header-actions" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+    <input id="stockSearch" class="input" placeholder="Pesquisar item..." style="width:220px;height:40px;font-size:0.85rem;">
+    <button class="btn" type="button" onclick="clearStockSearch()" style="height:40px;font-size:0.85rem;">Limpar</button>
+    <button class="btn btn-orange" type="button" onclick="openModal('modalAddItem')" style="height:40px;">Cadastrar item</button>
+    <button class="btn" type="button" onclick="openModal('modalHistorico')" style="height:40px;">Histórico</button>
   </div>
 </div>
 
@@ -36,7 +24,7 @@
 
   <div style="margin-top:10px; overflow:auto; max-height:56vh; border:1px solid rgba(255,255,255,.08); border-radius:12px;">
     <table class="table" style="width:100%; border-collapse:collapse;">
-      <thead style="position:sticky; top:0; background:rgba(0,0,0,.35); backdrop-filter: blur(8px); z-index:1;">
+      <thead style="position:sticky; top:0; background:var(--bg-main); backdrop-filter: blur(8px); z-index:1;">
         <tr>
           <th style="text-align:left;">Item</th>
           <th style="text-align:right; width:140px;">Quantidade</th>
@@ -90,7 +78,7 @@
     </div>
 
     <div class="modal-body">
-      <form method="POST" action="{{ url_for('main.almoxarifado_add_item') }}" class="form-grid">
+      <form method="POST" action="{{ url_for('almoxarifado.almoxarifado_add_item') }}" class="form-grid">
         <div class="field col-8">
           <label>Nome do item</label>
           <input class="input" name="name" placeholder="Ex: Saco de cimento, Alicate..." required>
@@ -135,18 +123,16 @@
     <div class="modal-body" style="flex:1 1 auto; overflow:auto; padding-bottom:14px;">
 
       <!-- Tabs -->
-      <div class="card" style="padding:10px; margin-bottom:12px;">
-        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-          <button class="btn btn-orange" type="button" id="tabEntrada" onclick="setMode('ENTRADA')">Entrada</button>
-          <button class="btn" type="button" id="tabSaida" onclick="setMode('SAIDA')">Saída</button>
-          <button class="btn" type="button" id="tabEditar" onclick="setMode('EDITAR_NOME')">Editar nome</button>
-          <div style="flex:1 1 auto;"></div>
-          <div class="muted small" id="modeHint">Adicionar quantidade ao estoque</div>
+      <div style="margin-bottom:16px;">
+        <div class="nav-tabs">
+          <button class="nav-tab active" type="button" id="tabEntrada" onclick="setMode('ENTRADA')">Entrada</button>
+          <button class="nav-tab" type="button" id="tabSaida" onclick="setMode('SAIDA')">Saída</button>
+          <button class="nav-tab" type="button" id="tabEditar" onclick="setMode('EDITAR_NOME')">Editar nome</button>
         </div>
       </div>
 
       <!-- ✅ PAINEL PADRÃO ÚNICO -->
-      <div class="card" style="padding:14px; margin-bottom:12px;">
+      <div class="card" style="padding:14px; margin-bottom:12px; min-height:420px; display:flex; flex-direction:column;">
         <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:flex-start;">
           <div>
             <div style="font-weight:900;" id="modeTitle">Registrar entrada</div>
@@ -155,8 +141,8 @@
         </div>
 
         <!-- ✅ UM FORM PRA TUDO -->
-        <form method="POST" action="{{ url_for('main.almoxarifado_movimento') }}"
-              class="form-grid" style="margin-top:12px;">
+        <form method="POST" action="{{ url_for('almoxarifado.almoxarifado_movimento') }}"
+              class="form-grid" style="margin-top:12px; flex:1;">
           <input type="hidden" name="item_id" id="u_item_id">
           <input type="hidden" name="type" id="u_type" value="ENTRADA">
 
@@ -202,7 +188,7 @@
             <input class="input" name="local" id="u_local" placeholder="Ex: Obra X / POP Y..." />
           </div>
 
-          <div class="field col-12 actions" style="display:flex; justify-content:flex-end; gap:10px;">
+          <div class="field col-12 actions" style="display:flex; justify-content:flex-end; gap:10px; margin-top:auto; padding-top:20px;">
             <button class="btn btn-orange" id="u_submit" type="submit">Registrar</button>
           </div>
         </form>
@@ -213,7 +199,7 @@
         <div style="font-weight:900;">Excluir item</div>
         <div class="muted small">Isso remove também o histórico dele.</div>
 
-        <form method="POST" action="{{ url_for('main.almoxarifado_item_delete') }}"
+        <form method="POST" action="{{ url_for('almoxarifado.almoxarifado_item_delete') }}"
               onsubmit="return confirm('Excluir este item? Isso remove também o histórico dele.');"
               style="margin-top:10px;">
           <input type="hidden" name="item_id" id="del_item_id">
@@ -244,7 +230,7 @@
 
       <div style="overflow:auto; max-height:60vh; border:1px solid rgba(255,255,255,.08); border-radius:12px;">
         <table class="table" style="width:100%; border-collapse:collapse;">
-          <thead style="position:sticky; top:0; background:rgba(0,0,0,.35); backdrop-filter: blur(8px); z-index:1;">
+          <thead style="position:sticky; top:0; background:var(--bg-main); backdrop-filter: blur(8px); z-index:1;">
             <tr>
               <th style="text-align:left; width:160px;">Data</th>
               <th style="text-align:left;">Item</th>
@@ -390,10 +376,9 @@
       const b = map[k];
       if(!b) return;
       if(k === mode){
-        b.classList.add("btn-orange");
+        b.classList.add("active");
       }else{
-        b.classList.remove("btn-orange");
-        b.classList.add("btn");
+        b.classList.remove("active");
       }
     });
   }

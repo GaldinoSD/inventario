@@ -3,180 +3,567 @@
 {% block content %}
 
 <!-- ===================== HERO / RESUMO ===================== -->
-<section class="card" style="
-  padding:22px;
-  position:relative;
-  overflow:hidden;
-  max-width:100%;
-">
-  <div aria-hidden="true" style="position:absolute;inset:-140px auto auto -140px;width:320px;height:320px;background:rgba(255,106,0,.14);filter:blur(50px);border-radius:999px;"></div>
-  <div aria-hidden="true" style="position:absolute;inset:-180px -180px auto auto;width:380px;height:380px;background:rgba(255,106,0,.08);filter:blur(60px);border-radius:999px;"></div>
+<div class="page-header">
+  <div class="page-header-text">
+    <h1 class="page-title">Dashboard</h1>
+    <p class="page-desc">Visão geral do inventário — patrimônio, equipamentos, almoxarifado e distribuição.</p>
+  </div>
+</div>
 
-  <div style="position:relative;">
-    <h1 style="margin:0;font-size:1.55rem;font-weight:950;letter-spacing:.2px;">
-      Inventário — Visão Geral
-    </h1>
-    <p class="muted" style="margin:.55rem 0 0;max-width:70ch;line-height:1.55;">
-      Totais do inventário e distribuição de equipamentos por setor e por localização.
-    </p>
+<!-- ===================== KPI ROW 1 — MAIN COUNTERS ===================== -->
+<div class="dash-kpi-grid">
+
+  <!-- TOTAL EQUIPAMENTOS -->
+  <div class="card kpi-card kpi-hero">
+    <div class="kpi-icon-wrap kpi-icon-orange">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+    </div>
+    <div class="kpi-value">{{ counts.equipments }}</div>
+    <div class="kpi-label">Equipamentos</div>
+    <div class="kpi-sub">Total no inventário</div>
   </div>
 
-  <!-- Totais (responsivo) -->
-  <div data-grid="totals" style="
-    position:relative;
-    display:grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap:16px;
-    margin-top:22px;
-  ">
-    <div class="card" style="padding:18px;border-radius:20px;min-width:0;">
-      <div class="muted small">Localizações</div>
-      <div style="font-size:2.2rem;font-weight:950;margin-top:6px;line-height:1;">
-        {{ counts.locations }}
-      </div>
-      <div class="muted small" style="margin-top:8px;">localizações cadastradas</div>
+  <!-- VALOR PATRIMÔNIO -->
+  <div class="card kpi-card kpi-hero">
+    <div class="kpi-icon-wrap kpi-icon-green">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
     </div>
-
-    <div class="card" style="padding:18px;border-radius:20px;min-width:0;">
-      <div class="muted small">Setores</div>
-      <div style="font-size:2.2rem;font-weight:950;margin-top:6px;line-height:1;">
-        {{ counts.sectors }}
-      </div>
-      <div class="muted small" style="margin-top:8px;">setores cadastrados</div>
-    </div>
-
-    <div class="card" style="padding:18px;border-radius:20px;min-width:0;">
-      <div class="muted small">Equipamentos</div>
-      <div style="font-size:2.2rem;font-weight:950;margin-top:6px;line-height:1;">
-        {{ counts.equipments }}
-      </div>
-      <div class="muted small" style="margin-top:8px;">equipamentos no inventário</div>
-    </div>
+    <div class="kpi-value kpi-value-sm">R$ {{ "%.2f"|format(counts.total_value)|replace(".", ",") }}</div>
+    <div class="kpi-label">Valor Patrimonial</div>
+    <div class="kpi-sub">Soma de todos os equipamentos</div>
   </div>
-
-  <!-- ✅ CSS inline só para este template -->
-  <style>
-    .page { overflow-x: hidden; }
-
-    @media (max-width: 980px){
-      .dash-totals{ grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
-    }
-    @media (max-width: 560px){
-      .dash-totals{ grid-template-columns: 1fr !important; }
-    }
-
-    @media (max-width: 980px){
-      .dash-two{ grid-template-columns: 1fr !important; }
-    }
-
-    @media (max-width: 560px){
-      .dash-inner{ grid-template-columns: 1fr !important; }
-    }
-
-    /* ✅ garante que cards “parecidos com link” não tenham comportamento clicável */
-    .dash-card{
-      cursor: default !important;
-      text-decoration: none !important;
-      color: inherit !important;
-    }
-  </style>
-
-</section>
-
-<script>
-  // aplica classes nos grids
-  (function(){
-    const totals = document.querySelectorAll('[data-grid="totals"]');
-    totals.forEach(el => el.classList.add('dash-totals'));
-    const two = document.querySelectorAll('[data-grid="two"]');
-    two.forEach(el => el.classList.add('dash-two'));
-    const inner = document.querySelectorAll('[data-grid="inner"]');
-    inner.forEach(el => el.classList.add('dash-inner'));
-  })();
-</script>
-
-<!-- ===================== SETORES + LOCALIZAÇÕES ===================== -->
-<section data-grid="two" style="
-  display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:16px;
-  margin-top:16px;
-  align-items:start;
-  max-width:100%;
-">
-
-  <!-- SETORES -->
-  <section class="card" style="padding:20px;min-width:0;">
-    <h2 style="margin:0;font-size:1.12rem;font-weight:900;">Equipamentos por Setor</h2>
-    <p class="muted small" style="margin:.5rem 0 0;">Distribuição de equipamentos por setor</p>
-
-    <div data-grid="inner" style="
-      display:grid;
-      grid-template-columns:repeat(2,minmax(0,1fr));
-      gap:16px;
-      margin-top:16px;
-      max-width:100%;
-    ">
-      {% for row in by_sector %}
-        <div
-          class="card dash-card"
-          style="
-            padding:18px;
-            border-radius:20px;
-            min-width:0;
-            display:block;
-          "
-        >
-          <div class="muted small" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-            {{ row.name }}
-          </div>
-          <div style="font-size:2.05rem;font-weight:950;margin-top:10px;line-height:1;">
-            {{ row.count }}
-          </div>
-          <div class="muted small" style="margin-top:8px;">Equipamentos</div>
-        </div>
-      {% else %}
-        <div class="muted small">Nenhum setor cadastrado.</div>
-      {% endfor %}
-    </div>
-  </section>
 
   <!-- LOCALIZAÇÕES -->
-  <section class="card" style="padding:20px;min-width:0;">
-    <h2 style="margin:0;font-size:1.12rem;font-weight:900;">Equipamentos por Localização</h2>
-    <p class="muted small" style="margin:.5rem 0 0;">Distribuição de equipamentos por localização</p>
-
-    <div data-grid="inner" style="
-      display:grid;
-      grid-template-columns:repeat(2,minmax(0,1fr));
-      gap:16px;
-      margin-top:16px;
-      max-width:100%;
-    ">
-      {% for row in by_location %}
-        <div
-          class="card dash-card"
-          style="
-            padding:18px;
-            border-radius:20px;
-            min-width:0;
-            display:block;
-          "
-        >
-          <div class="muted small" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-            {{ row.name }}
-          </div>
-          <div style="font-size:2.05rem;font-weight:950;margin-top:10px;line-height:1;">
-            {{ row.count }}
-          </div>
-          <div class="muted small" style="margin-top:8px;">Equipamentos</div>
-        </div>
-      {% else %}
-        <div class="muted small">Nenhuma localização cadastrada.</div>
-      {% endfor %}
+  <div class="card kpi-card">
+    <div class="kpi-icon-wrap kpi-icon-blue">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
     </div>
-  </section>
+    <div class="kpi-value">{{ counts.locations }}</div>
+    <div class="kpi-label">Localizações</div>
+  </div>
 
-</section>
+  <!-- SETORES -->
+  <div class="card kpi-card">
+    <div class="kpi-icon-wrap kpi-icon-purple-alt">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    </div>
+    <div class="kpi-value">{{ counts.sectors }}</div>
+    <div class="kpi-label">Setores</div>
+  </div>
+
+</div>
+
+<!-- ===================== STATUS CARDS ROW ===================== -->
+<div class="dash-status-grid">
+
+  <div class="card status-card status-ativo">
+    <div class="status-dot dot-green"></div>
+    <div class="status-info">
+      <div class="status-value">{{ counts.ativos }}</div>
+      <div class="status-label">Ativos</div>
+    </div>
+    <div class="status-pct">
+      {% if counts.equipments > 0 %}
+        {{ "%.0f"|format((counts.ativos / counts.equipments) * 100) }}%
+      {% else %}
+        0%
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card status-card status-manut">
+    <div class="status-dot dot-yellow"></div>
+    <div class="status-info">
+      <div class="status-value">{{ counts.manutencao }}</div>
+      <div class="status-label">Manutenção</div>
+    </div>
+    <div class="status-pct">
+      {% if counts.equipments > 0 %}
+        {{ "%.0f"|format((counts.manutencao / counts.equipments) * 100) }}%
+      {% else %}
+        0%
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card status-card status-baixado">
+    <div class="status-dot dot-red"></div>
+    <div class="status-info">
+      <div class="status-value">{{ counts.baixados }}</div>
+      <div class="status-label">Baixados</div>
+    </div>
+    <div class="status-pct">
+      {% if counts.equipments > 0 %}
+        {{ "%.0f"|format((counts.baixados / counts.equipments) * 100) }}%
+      {% else %}
+        0%
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ALMOX MINI -->
+  <div class="card status-card status-almox">
+    <div class="status-dot dot-orange"></div>
+    <div class="status-info">
+      <div class="status-value">{{ counts.almox_items }}</div>
+      <div class="status-label">Itens Almoxarifado</div>
+    </div>
+    <div class="status-pct">{{ counts.almox_total_qty }} un.</div>
+  </div>
+
+</div>
+
+<!-- ===================== MAIN GRID: CHARTS + RECENT ===================== -->
+<div class="dash-main-grid">
+
+  <!-- LEFT: SECTORS + LOCATIONS (CHARTS) -->
+  <div class="dash-charts-col">
+
+    <!-- SETORES -->
+    <section class="card dash-chart-card">
+      <div class="dash-card-header">
+        <div>
+          <h2 class="dash-card-title">Equipamentos por Setor</h2>
+          <p class="dash-card-desc">Distribuição de volume</p>
+        </div>
+        <span class="badge">{{ by_sector|length }} setores</span>
+      </div>
+      <div class="progress-list">
+        {% set max_sec = namespace(val=1) %}
+        {% for row in by_sector %}
+          {% if loop.first and row.count > 0 %}{% set max_sec.val = row.count %}{% endif %}
+          <div class="progress-item">
+            <div class="progress-header">
+              <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ row.name }}</span>
+              <span class="progress-count">{{ row.count }}</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-bar" style="width: {{ (row.count / max_sec.val) * 100 }}%"></div>
+            </div>
+          </div>
+        {% else %}
+          <div class="muted small" style="margin-top:10px;">Nenhum setor cadastrado.</div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <!-- LOCALIZAÇÕES -->
+    <section class="card dash-chart-card">
+      <div class="dash-card-header">
+        <div>
+          <h2 class="dash-card-title">Equipamentos por Localização</h2>
+          <p class="dash-card-desc">Distribuição de volume</p>
+        </div>
+        <span class="badge">{{ by_location|length }} locais</span>
+      </div>
+      <div class="progress-list">
+        {% set max_loc = namespace(val=1) %}
+        {% for row in by_location %}
+          {% if loop.first and row.count > 0 %}{% set max_loc.val = row.count %}{% endif %}
+          <div class="progress-item">
+            <div class="progress-header">
+              <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ row.name }}</span>
+              <span class="progress-count">{{ row.count }}</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-bar" style="width: {{ (row.count / max_loc.val) * 100 }}%"></div>
+            </div>
+          </div>
+        {% else %}
+          <div class="muted small" style="margin-top:10px;">Nenhuma localização cadastrada.</div>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+
+  <!-- RIGHT: RECENT ACTIVITY -->
+  <div class="dash-activity-col">
+
+    <!-- ÚLTIMOS EQUIPAMENTOS CADASTRADOS -->
+    <section class="card dash-chart-card">
+      <div class="dash-card-header">
+        <div>
+          <h2 class="dash-card-title">Equipamentos Recentes</h2>
+          <p class="dash-card-desc">Últimos cadastrados</p>
+        </div>
+        <a href="{{ url_for('equipments.equipments_list') }}" class="btn" style="font-size:0.8rem;padding:6px 12px;">
+          Ver todos
+        </a>
+      </div>
+      <div class="recent-list">
+        {% for eq in recent_equipment %}
+          <div class="recent-item">
+            <div class="recent-item-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            </div>
+            <div class="recent-item-info">
+              <div class="recent-item-name">{{ eq.name }}</div>
+              <div class="recent-item-meta">
+                <span>{{ eq.barcode_pat }}</span>
+                {% if eq.brand %}<span>• {{ eq.brand }}</span>{% endif %}
+              </div>
+            </div>
+            <div class="recent-item-right">
+              <span class="badge {% if eq.status == 'Ativo' %}badge-success{% elif eq.status == 'Manutenção' %}badge-warning{% else %}badge-danger{% endif %}" style="font-size:0.65rem;">{{ eq.status }}</span>
+              <span class="muted small">{{ eq.created_at.strftime('%d/%m/%y') }}</span>
+            </div>
+          </div>
+        {% else %}
+          <div class="muted small" style="padding:16px 0;">Nenhum equipamento cadastrado.</div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <!-- MOVIMENTAÇÕES ALMOXARIFADO -->
+    <section class="card dash-chart-card">
+      <div class="dash-card-header">
+        <div>
+          <h2 class="dash-card-title">Movimentações Recentes</h2>
+          <p class="dash-card-desc">Almoxarifado</p>
+        </div>
+        <a href="{{ url_for('almoxarifado.almoxarifado') }}" class="btn" style="font-size:0.8rem;padding:6px 12px;">
+          Ver todos
+        </a>
+      </div>
+      <div class="recent-list">
+        {% for mv in recent_movements %}
+          <div class="recent-item">
+            <div class="recent-item-icon mv-icon-{{ mv.type|lower }}">
+              {% if mv.type == 'ENTRADA' %}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="5 12 12 5 19 12"/></svg>
+              {% elif mv.type == 'SAIDA' %}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+              {% else %}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+              {% endif %}
+            </div>
+            <div class="recent-item-info">
+              <div class="recent-item-name">{{ mv.item_name }}</div>
+              <div class="recent-item-meta">
+                <span class="mv-type-tag mv-tag-{{ mv.type|lower }}">{{ mv.type }}</span>
+                <span>{{ mv.qty }} un.</span>
+                {% if mv.motivo %}<span>• {{ mv.motivo[:30] }}{% if mv.motivo|length > 30 %}…{% endif %}</span>{% endif %}
+              </div>
+            </div>
+            <div class="recent-item-right">
+              <span class="muted small">{{ mv.created_at.strftime('%d/%m/%y') }}</span>
+            </div>
+          </div>
+        {% else %}
+          <div class="muted small" style="padding:16px 0;">Nenhuma movimentação registrada.</div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <!-- ESTOQUE BAIXO -->
+    {% if almox_low_stock %}
+    <section class="card dash-chart-card dash-alert-card">
+      <div class="dash-card-header">
+        <div>
+          <h2 class="dash-card-title" style="color:#ef4444;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Estoque Baixo
+          </h2>
+          <p class="dash-card-desc">Itens com 5 ou menos unidades</p>
+        </div>
+      </div>
+      <div class="recent-list">
+        {% for item in almox_low_stock %}
+          <div class="recent-item">
+            <div class="recent-item-icon" style="background:rgba(239,68,68,0.1);color:#ef4444;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            </div>
+            <div class="recent-item-info">
+              <div class="recent-item-name">{{ item.name }}</div>
+            </div>
+            <div class="recent-item-right">
+              <span class="badge badge-danger" style="font-size:0.75rem;">{{ item.qty }} un.</span>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+  </div>
+</div>
+
+<!-- ===================== DASHBOARD-SPECIFIC STYLES ===================== -->
+<style>
+  .page { overflow-x: hidden; }
+
+  /* ===== KPI GRID ===== */
+  .dash-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .kpi-hero {
+    grid-column: span 1;
+  }
+
+  .kpi-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 22px 24px !important;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .kpi-icon-wrap {
+    width: 42px; height: 42px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 8px;
+    flex-shrink: 0;
+  }
+  .kpi-icon-wrap svg {
+    width: 22px; height: 22px;
+  }
+  .kpi-icon-orange {
+    background: rgba(255, 106, 0, 0.12);
+    color: var(--orange);
+  }
+  .kpi-icon-green {
+    background: rgba(34, 197, 94, 0.12);
+    color: #22c55e;
+  }
+  .kpi-icon-blue {
+    background: rgba(59, 130, 246, 0.12);
+    color: #3b82f6;
+  }
+  .kpi-icon-purple-alt {
+    background: rgba(236, 72, 153, 0.12);
+    color: #ec4899;
+  }
+
+  .kpi-value {
+    font-size: 2.4rem;
+    font-weight: 900;
+    line-height: 1;
+    color: var(--text-main);
+    letter-spacing: -0.03em;
+  }
+  .kpi-value-sm {
+    font-size: 1.6rem;
+  }
+  .kpi-label {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-top: 4px;
+  }
+  .kpi-sub {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  /* ===== STATUS CARDS ===== */
+  .dash-status-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .status-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 20px !important;
+    border-radius: 14px !important;
+  }
+  .status-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    animation: pulse-dot 2.5s ease-in-out infinite;
+  }
+  .dot-green { background: #22c55e; box-shadow: 0 0 8px rgba(34,197,94,0.4); }
+  .dot-yellow { background: #eab308; box-shadow: 0 0 8px rgba(234,179,8,0.4); }
+  .dot-red { background: #ef4444; box-shadow: 0 0 8px rgba(239,68,68,0.4); }
+  .dot-orange { background: var(--orange); box-shadow: 0 0 8px rgba(255,106,0,0.4); }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(1.2); }
+  }
+
+  .status-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .status-value {
+    font-size: 1.5rem;
+    font-weight: 900;
+    line-height: 1;
+    color: var(--text-main);
+  }
+  .status-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    margin-top: 2px;
+  }
+  .status-pct {
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  /* ===== MAIN 2-COL GRID ===== */
+  .dash-main-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  .dash-charts-col,
+  .dash-activity-col {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .dash-chart-card {
+    padding: 24px !important;
+  }
+
+  .dash-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .dash-card-title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+  }
+  .dash-card-desc {
+    margin: 4px 0 0;
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    font-weight: 500;
+  }
+
+  /* ===== RECENT ITEMS LIST ===== */
+  .recent-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .recent-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s ease;
+  }
+  .recent-item:last-child {
+    border-bottom: none;
+  }
+  .recent-item:hover {
+    background: var(--bg-surface-hover);
+    margin: 0 -12px;
+    padding-left: 12px;
+    padding-right: 12px;
+    border-radius: var(--radius-sm);
+  }
+
+  .recent-item-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    background: rgba(255, 106, 0, 0.1);
+    color: var(--orange);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .recent-item-icon svg {
+    width: 18px; height: 18px;
+  }
+
+  /* Movement type icon colors */
+  .mv-icon-entrada { background: rgba(34,197,94,0.1); color: #22c55e; }
+  .mv-icon-saida { background: rgba(59,130,246,0.1); color: #3b82f6; }
+  .mv-icon-perda, .mv-icon-danificado { background: rgba(239,68,68,0.1); color: #ef4444; }
+
+  .recent-item-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .recent-item-name {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .recent-item-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-top: 2px;
+    flex-wrap: wrap;
+  }
+
+  .recent-item-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  /* Movement type tags */
+  .mv-type-tag {
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .mv-tag-entrada { background: rgba(34,197,94,0.12); color: #16a34a; }
+  .mv-tag-saida { background: rgba(59,130,246,0.12); color: #3b82f6; }
+  .mv-tag-perda { background: rgba(239,68,68,0.12); color: #dc2626; }
+  .mv-tag-danificado { background: rgba(239,68,68,0.12); color: #dc2626; }
+
+  html[data-theme="dark"] .mv-tag-entrada { color: #4ade80; }
+  html[data-theme="dark"] .mv-tag-saida { color: #60a5fa; }
+  html[data-theme="dark"] .mv-tag-perda, html[data-theme="dark"] .mv-tag-danificado { color: #f87171; }
+
+  /* Alert card subtle border */
+  .dash-alert-card {
+    border-color: rgba(239, 68, 68, 0.25) !important;
+  }
+  html[data-theme="dark"] .dash-alert-card {
+    background: linear-gradient(145deg, rgba(24, 24, 31, 0.9) 0%, rgba(40, 18, 18, 0.95) 100%) !important;
+  }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 1100px) {
+    .dash-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .dash-status-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .dash-main-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 560px) {
+    .dash-kpi-grid { grid-template-columns: 1fr; }
+    .dash-status-grid { grid-template-columns: 1fr; }
+  }
+</style>
 
 {% endblock %}

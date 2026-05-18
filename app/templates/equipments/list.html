@@ -2,51 +2,45 @@
 {% block title %}Equipamentos — Inventário{% endblock %}
 {% block content %}
 
-<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-  <h1 style="margin:0;">Equipamentos</h1>
-
-  <!-- ✅ Botões do topo -->
-  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-    <button class="btn btn-orange" type="button" onclick="openModal('modalEquipmentNew')">
+<div class="page-header" style="flex-wrap:wrap;gap:16px;">
+  <div class="page-header-text" style="min-width:220px;">
+    <h1 class="page-title">Equipamentos</h1>
+    <p class="page-desc">Cadastro, consulta e gestão de todos os equipamentos do inventário.</p>
+  </div>
+  <div class="page-header-actions" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+    <button class="btn btn-orange" type="button" onclick="openModal('modalEquipmentNew')" style="height:40px;">
       + Novo Equipamento
     </button>
-
-    <button class="btn btn-orange" type="button" onclick="openScanModalForCreate()">
+    <button class="btn btn-orange" type="button" onclick="openScanModalForCreate()" style="height:40px;">
       + Cadastro por câmera
     </button>
   </div>
 </div>
 
-<form method="get" class="card" style="padding:12px;margin-top:12px;display:grid;gap:10px;">
-  <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;">
-    <div>
-      <label class="muted small">Pesquisar</label>
-      <input class="input" name="q" value="{{ q }}" placeholder="Nome, marca, NF ou PAT/código">
-    </div>
-    <div>
-      <label class="muted small">Localização</label>
-      <select name="location_id">
-        <option value="">Todas</option>
-        {% for loc in locations %}
-          <option value="{{ loc.id }}" {% if location_id|int == loc.id %}selected{% endif %}>{{ loc.name }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div>
-      <label class="muted small">Setor</label>
-      <select name="sector_id">
-        <option value="">Todos</option>
-        {% for s in sectors %}
-          <option value="{{ s.id }}" {% if sector_id|int == s.id %}selected{% endif %}>{{ s.name }}</option>
-        {% endfor %}
-      </select>
-    </div>
+<form method="get" style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:12px;">
+  <div style="flex:2;min-width:200px;">
+    <input class="input" name="q" value="{{ q }}" placeholder="Pesquisar nome, marca, NF ou PAT/código..." style="height:40px;font-size:0.85rem;">
   </div>
-
-  <div style="display:flex;gap:10px;flex-wrap:wrap;">
-    <button class="btn" type="submit">Filtrar</button>
-    <a class="btn" href="{{ url_for('main.equipments_list') }}">Limpar</a>
+  <div style="flex:1;min-width:150px;">
+    <select name="location_id" style="height:40px;font-size:0.85rem;">
+      <option value="">Todas localizações</option>
+      {% for loc in locations %}
+        <option value="{{ loc.id }}" {% if location_id|int == loc.id %}selected{% endif %}>{{ loc.name }}</option>
+      {% endfor %}
+    </select>
   </div>
+  <div style="flex:1;min-width:150px;">
+    <select name="sector_id" style="height:40px;font-size:0.85rem;">
+      <option value="">Todos setores</option>
+      {% for s in sectors %}
+        <option value="{{ s.id }}" {% if sector_id|int == s.id %}selected{% endif %}>{{ s.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <button class="btn" type="submit" style="height:40px;font-size:0.85rem;">Filtrar</button>
+  {% if q or location_id or sector_id %}
+    <a class="btn" href="{{ url_for('equipments.equipments_list') }}" style="height:40px;font-size:0.85rem;">Limpar</a>
+  {% endif %}
 </form>
 
 <div class="card" style="padding:0;margin-top:12px;overflow:hidden;">
@@ -69,6 +63,10 @@
           <td>
             <b>{{ e.name }}</b><br>
             <span class="muted small">{{ e.brand or '-' }}</span>
+            <br>
+            <span class="badge {% if e.status == 'Ativo' %}badge-success{% elif e.status == 'Manutenção' %}badge-warning{% else %}badge-danger{% endif %}" style="margin-top: 4px; display: inline-block;">
+              {{ e.status }}
+            </span>
           </td>
           <td>{{ e.location.name }}</td>
           <td>{{ e.sector.name }}</td>
@@ -110,6 +108,7 @@
               data-barcode_pat="{{ e.barcode_pat|e }}"
               data-location_id="{{ e.location_id }}"
               data-sector_id="{{ e.sector_id }}"
+              data-status="{{ e.status }}"
             >
               Editar
             </button>
@@ -117,7 +116,7 @@
             <button
               class="btn btn-danger"
               type="button"
-              onclick="openDeleteModal('{{ url_for('main.equipments_delete', equipment_id=e.id) }}', '{{ e.name|e }}', '{{ e.barcode_pat|e }}')"
+              onclick="openDeleteModal('{{ url_for('equipments.equipments_delete', equipment_id=e.id) }}', '{{ e.name|e }}', '{{ e.barcode_pat|e }}')"
             >
               Excluir
             </button>
@@ -173,7 +172,7 @@
       <button class="btn" type="button" onclick="closeModal('modalEquipmentNew')">Fechar</button>
     </div>
 
-    <form method="post" action="{{ url_for('main.equipments_create') }}" class="modal-body" enctype="multipart/form-data">
+    <form method="post" action="{{ url_for('equipments.equipments_create') }}" class="modal-body" enctype="multipart/form-data">
       <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;">
         <div>
           <label class="muted small">Nome *</label>
@@ -182,6 +181,17 @@
         <div>
           <label class="muted small">Marca</label>
           <input class="input" name="brand" placeholder="Ex.: Yamaha">
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
+        <div>
+          <label class="muted small">Status *</label>
+          <select name="status" class="input" required>
+            <option value="Ativo" selected>Ativo</option>
+            <option value="Manutenção">Em Manutenção</option>
+            <option value="Baixado">Baixado/Doado</option>
+          </select>
         </div>
       </div>
 
@@ -263,6 +273,17 @@
         <div>
           <label class="muted small">Marca</label>
           <input id="edit_brand" class="input" name="brand">
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
+        <div>
+          <label class="muted small">Status *</label>
+          <select id="edit_status" name="status" class="input" required>
+            <option value="Ativo">Ativo</option>
+            <option value="Manutenção">Em Manutenção</option>
+            <option value="Baixado">Baixado/Doado</option>
+          </select>
         </div>
       </div>
 
@@ -463,12 +484,15 @@ function openEditEquipment(btn){
   document.getElementById("edit_value").value = btn.dataset.value || "";
   document.getElementById("edit_invoice_nf").value = btn.dataset.invoice_nf || "";
   document.getElementById("edit_barcode_pat").value = btn.dataset.barcode_pat || "";
-
   document.getElementById("edit_location_id").value = btn.dataset.location_id || "";
   document.getElementById("edit_sector_id").value = btn.dataset.sector_id || "";
+  
+  if(document.getElementById("edit_status")) {
+      document.getElementById("edit_status").value = btn.dataset.status || "Ativo";
+  }
 
   const form = document.getElementById("editEquipmentForm");
-  form.action = "{{ url_for('main.equipments_update', equipment_id=0) }}".replace("/0/", "/" + id + "/");
+  form.action = "{{ url_for('equipments.equipments_update', equipment_id=0) }}".replace("/0/", "/" + id + "/");
 
   openModal("modalEquipmentEdit");
 }

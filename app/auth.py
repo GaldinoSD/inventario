@@ -1,6 +1,7 @@
 # app/auth.py
 from functools import wraps
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from .models import User
 
 bp = Blueprint("auth", __name__)
 
@@ -24,13 +25,12 @@ def login_post():
     username = (request.form.get("username") or "").strip()
     password = (request.form.get("password") or "").strip()
 
-    # ✅ simples (troque depois por DB / hash)
-    USER_OK = "admin"
-    PASS_OK = "1234"
+    user = User.query.filter_by(username=username).first()
 
-    if username == USER_OK and password == PASS_OK:
+    if user and user.check_password(password):
         session["user_logged"] = True
-        session["user_name"] = username
+        session["user_name"] = user.username
+        session["user_role"] = user.role
         flash("Bem-vindo!", "success")
         return redirect(url_for("main.index"))
 
@@ -41,3 +41,4 @@ def login_post():
 def logout():
     session.clear()
     return redirect(url_for("auth.login"))
+

@@ -1,211 +1,150 @@
 <!doctype html>
-<html lang="pt-br">
+<html lang="pt-br" data-theme="light">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>{% block title %}Inventário{% endblock %}</title>
+  
+  <!-- Theme & Sidebar Initialization Script -->
+  <script>
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    const sidebarCollapsed = localStorage.getItem('sidebar_collapsed') === 'true';
+  </script>
+
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-
-  <!-- ✅ Topbar + botões ainda menores -->
-  <style>
-    /* ===== TOPBAR (header) ===== */
-    .topbar{
-      position: sticky;
-      top: 0;
-      z-index: 50;
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      background: rgba(15, 15, 18, .60);
-      border-bottom: 1px solid rgba(255,255,255,.08);
-    }
-
-    /* 🔽 Barra superior ainda mais baixa */
-    .topbar .topbar-inner{
-      padding: 4px 0;
-    }
-
-    /* Logo menor */
-    .brand-icon{
-      border-radius: 14px;
-      padding: 4px 7px;
-      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.02));
-      border: 1px solid rgba(255,255,255,.10);
-      box-shadow: 0 10px 30px rgba(0,0,0,.25);
-    }
-
-    /* ===== Botões do TOPO ainda menores ===== */
-    .topbar .btn{
-      padding: 5px 9px !important;
-      font-size: .82rem !important;
-      border-radius: 10px !important;
-      line-height: 1 !important;
-      min-height: 30px;
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      letter-spacing: .2px;
-      box-shadow: 0 10px 24px rgba(0,0,0,.18);
-      border: 1px solid rgba(255,255,255,.10);
-    }
-
-    .topbar .btn:hover{
-      transform: translateY(-1px);
-      filter: brightness(1.02);
-    }
-    .topbar .btn:active{
-      transform: translateY(0px);
-    }
-
-    .nav{
-      gap: 6px !important;
-    }
-
-    /* Responsivo */
-    @media (max-width: 900px){
-      .topbar .topbar-inner{
-        gap: 10px !important;
-        padding: 4px 0;
-      }
-
-      .brand-icon{
-        width: 64px !important;
-        height: 44px !important;
-      }
-      .brand-icon img{
-        height: 44px !important;
-      }
-
-      .topbar .btn{
-        padding: 5px 8px !important;
-        font-size: .80rem !important;
-        border-radius: 10px !important;
-        min-height: 29px;
-      }
-    }
-
-    /* ===== Conteúdo ===== */
-    .main{
-      padding-top: 14px;
-    }
-
-    /* ===== Modais: leve upgrade visual ===== */
-    .modal.card{
-      border: 1px solid rgba(255,255,255,.10);
-      background: rgba(22,22,26,.92);
-      box-shadow: 0 24px 80px rgba(0,0,0,.55);
-      border-radius: 18px;
-    }
-
-    .modal-header{
-      border-bottom: 1px solid rgba(255,255,255,.08);
-      padding-bottom: 10px;
-    }
-
-    .modal-backdrop.show{
-      background: rgba(0,0,0,.55);
-      backdrop-filter: blur(3px);
-      -webkit-backdrop-filter: blur(3px);
-    }
-
-    .modal .input{
-      border-radius: 12px;
-    }
-  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 </head>
 
 <body class="app">
 
-  <header class="topbar">
-    <div class="container topbar-inner" style="
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      flex-wrap:wrap;
-    ">
+  <div class="app-wrapper" id="appWrapper">
+    <!-- Apply initial collapse state -->
+    <script>
+      if(sidebarCollapsed) document.getElementById('appWrapper').classList.add('collapsed');
+    </script>
+    <!-- Overlay for Mobile Sidebar -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
-      <!-- ESQUERDA: LOGO -->
-      <a href="{{ url_for('main.index') }}" class="brand" style="
-        display:flex;
-        align-items:center;
-        gap:10px;
-        text-decoration:none;
-        flex:0 0 auto;
-      ">
-        <div class="brand-icon" style="
-          width:68px;
-          height:46px;
-          display:flex;
-          align-items:center;
-          justify-content:center;
-          overflow:hidden;
-        ">
-          <img
-            src="{{ url_for('static', filename='logo.png') }}"
-            alt="Logo"
-            style="
-              height:46px;
-              width:auto;
-              max-width:100%;
-              object-fit:contain;
-            "
-          >
+    <!-- ===================== SIDEBAR ===================== -->
+    <aside class="sidebar" id="sidebar">
+      <!-- BRAND / LOGO -->
+      <div class="sidebar-header">
+        <div class="brand-wrapper">
+          <div class="brand-icon">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" style="width:100%;height:100%;object-fit:contain;border-radius:inherit;">
+          </div>
+          <div class="brand-text">
+            <span class="brand-title">Inventário</span>
+            <span class="brand-subtitle">IMO Workspace</span>
+          </div>
         </div>
-
-        <div class="brand-text" style="display:none;">
-          <div class="brand-title">Inventário</div>
-          <div class="muted small">IMO</div>
-        </div>
-      </a>
-
-      <!-- CENTRO: BOTÕES -->
-      <nav class="nav" style="
-        flex:1 1 auto;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        flex-wrap:wrap;
-        min-width:0;
-      ">
-        <a class="btn btn-orange" href="{{ url_for('main.index') }}">Inventário</a>
-        <a class="btn btn-orange" href="{{ url_for('main.locations_sectors') }}">Cadastro de Localização</a>
-        <a class="btn btn-orange" href="{{ url_for('main.equipments_list') }}">Equipamentos</a>
-        <a class="btn btn-orange" href="{{ url_for('main.almoxarifado') }}">Almoxarifado</a>
-
-        <button class="btn btn-orange" type="button" onclick="openScanModal()">
-          Pesquisa (Câmera)
+        <button class="collapse-btn" onclick="toggleSidebarCollapse()" title="Encolher Menu">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
-      </nav>
-
-      <!-- DIREITA: SAIR -->
-      <div style="flex:0 0 auto; display:flex; align-items:center;">
-        <a class="btn btn-danger" href="{{ url_for('auth.logout') }}">Sair</a>
       </div>
 
-    </div>
-  </header>
+      <!-- NAVIGATION LINKS -->
+      <nav class="sidebar-nav">
+        <a class="sidebar-link {% if request.endpoint == 'main.index' %}active{% endif %}" href="{{ url_for('main.index') }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          <span>Dashboard</span>
+        </a>
+        <a class="sidebar-link {% if request.endpoint and 'locations' in request.endpoint %}active{% endif %}" href="{{ url_for('locations.locations_sectors') }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+          <span>Localizações</span>
+        </a>
+        <a class="sidebar-link {% if request.endpoint and 'equipments' in request.endpoint %}active{% endif %}" href="{{ url_for('equipments.equipments_list') }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+          <span>Equipamentos</span>
+        </a>
+        <a class="sidebar-link {% if request.endpoint and 'almoxarifado' in request.endpoint %}active{% endif %}" href="{{ url_for('almoxarifado.almoxarifado') }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="7.5 4.21 12 6.81 16.5 4.21"></polyline><polyline points="7.5 19.79 7.5 14.6 3 12"></polyline><polyline points="21 12 16.5 14.6 16.5 19.79"></polyline><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+          <span>Almoxarifado</span>
+        </a>
+      </nav>
 
-  <main class="main">
-    <div class="container page">
-      {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-          <div class="flash-wrap">
-            {% for category, message in messages %}
-              <div class="flash {{ category }}">{{ message }}</div>
-            {% endfor %}
+      <!-- FOOTER / TOOLS -->
+      <div class="sidebar-footer">
+        <button class="btn btn-orange" type="button" onclick="openScanModal()" style="width: 100%;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <span>Escanear</span>
+        </button>
+        
+        <button class="theme-switch" onclick="toggleTheme()" title="Mudar Tema">
+          <span class="theme-icon" id="themeIcon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+            <span class="theme-text">Modo Claro</span>
+          </span>
+          <div class="theme-toggle-ui">
+            <div id="themeKnob" style="position:absolute; top:2px; left:2px; width:14px; height:14px; background:var(--text-main); border-radius:50%; transition: left 0.3s;"></div>
           </div>
-        {% endif %}
-      {% endwith %}
+        </button>
 
-      {% block content %}{% endblock %}
-    </div>
-  </main>
+        <a class="sidebar-link" href="{{ url_for('auth.logout') }}" style="color: #ef4444; margin-top: 8px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+          <span>Sair do Sistema</span>
+        </a>
+      </div>
+    </aside>
+
+    <!-- ===================== MAIN CONTENT ===================== -->
+    <main class="main-content">
+      
+      <!-- MOBILE HEADER -->
+      <div class="mobile-topbar">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div class="brand-icon" style="width:32px; height:32px;">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" style="width:100%;height:100%;object-fit:contain;border-radius:inherit;">
+          </div>
+          <span style="font-weight:800;">Inventário IMO</span>
+        </div>
+        <button class="menu-toggle" onclick="toggleSidebar()">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+        </button>
+      </div>
+
+      <div class="container page">
+        <!-- Toastify Alerts Injection -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <script>
+              document.addEventListener("DOMContentLoaded", function() {
+                {% for category, message in messages %}
+                  Toastify({
+                    text: "{{ message|replace('\"', '\\\"')|replace('\n', '\\n') }}",
+                    duration: 4000,
+                    close: true,
+                    gravity: "top", 
+                    position: "right",
+                    stopOnFocus: true, 
+                    style: {
+                      background: "{{ 'linear-gradient(135deg, #FF6A00, #FF8C42)' if category == 'success' else 'linear-gradient(135deg, #ef4444, #f87171)' }}",
+                      borderRadius: "12px",
+                      fontFamily: "'Inter', sans-serif",
+                      fontWeight: "600",
+                      boxShadow: "0 10px 25px rgba(0,0,0,0.3)"
+                    }
+                  }).showToast();
+                {% endfor %}
+              });
+            </script>
+          {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+
+  </div> <!-- End App Wrapper -->
 
   {% block modal %}{% endblock %}
 
   <!-- ===================== MODAL SCAN (CÂMERA) ===================== -->
   <div class="modal-backdrop" id="scanModal" aria-hidden="true">
-    <!-- ✅ diminuído: modal-md (igual ao outro) -->
     <div class="modal card modal-md" role="dialog" aria-modal="true" aria-labelledby="scanTitle">
       <div class="modal-header">
         <div>
@@ -217,7 +156,6 @@
 
       <div class="modal-body">
         <div class="card" style="padding:12px;">
-          <!-- ✅ limita altura do leitor para não “estourar” -->
           <div id="qr-reader" style="width:100%;max-height:60vh;overflow:hidden;border-radius:12px;"></div>
           <div id="scanHint" class="muted small" style="margin-top:10px;">
             Se não aparecer a câmera, autorize nas permissões do navegador.
@@ -254,6 +192,7 @@
             <span class="badge" id="pm_code">PAT/Código: -</span>
             <span class="badge" id="pm_sector">Setor: -</span>
             <span class="badge" id="pm_location">Local: -</span>
+            <span class="badge" id="pm_status">Status: -</span>
           </div>
 
           <div style="display:grid; gap:6px;">
@@ -265,7 +204,7 @@
         </div>
 
         <div class="modal-actions" style="margin-top:12px;">
-          <a class="btn" id="pm_open" href="{{ url_for('main.equipments_list') }}">Abrir na lista</a>
+          <a class="btn" id="pm_open" href="{{ url_for('equipments.equipments_list') }}">Abrir na lista</a>
           <button class="btn btn-orange" type="button" onclick="scanAgain()">Escanear outro</button>
         </div>
       </div>
@@ -273,8 +212,52 @@
   </div>
 
   <script src="https://unpkg.com/html5-qrcode" defer></script>
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 
   <script>
+    // ===================== SIDEBAR & THEME =====================
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      sidebar.classList.toggle('open');
+      overlay.classList.toggle('show');
+    }
+
+    function toggleSidebarCollapse() {
+      const appWrapper = document.getElementById('appWrapper');
+      appWrapper.classList.toggle('collapsed');
+      
+      const isCollapsed = appWrapper.classList.contains('collapsed');
+      localStorage.setItem('sidebar_collapsed', isCollapsed ? 'true' : 'false');
+    }
+
+    function toggleTheme() {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+      updateThemeUI();
+    }
+
+    function updateThemeUI() {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const themeIcon = document.getElementById('themeIcon');
+      const themeKnob = document.getElementById('themeKnob');
+      
+      if (currentTheme === 'dark') {
+        themeIcon.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg> <span class="theme-text">Modo Escuro</span>`;
+        themeKnob.style.left = '16px';
+      } else {
+        themeIcon.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg> <span class="theme-text">Modo Claro</span>`;
+        themeKnob.style.left = '2px';
+      }
+    }
+    
+    // Initialize Theme UI on load
+    document.addEventListener("DOMContentLoaded", updateThemeUI);
+
+
+    // ===================== QR SCANNER =====================
     let html5QrCode = null;
     let scannerRunning = false;
 
@@ -306,7 +289,7 @@
           { facingMode: "environment" },
           {
             fps: 12,
-            qrbox: { width: 220, height: 220 }, // ✅ menor
+            qrbox: { width: 220, height: 220 },
             aspectRatio: 1.7777778,
             disableFlip: true
           },
@@ -353,8 +336,8 @@
       const scan = document.getElementById("scanModal");
       const prod = document.getElementById("productModal");
 
-      if (scan.classList.contains("show") && e.target === scan) await closeScanModal();
-      if (prod.classList.contains("show") && e.target === prod) await closeProductModal();
+      if (scan && scan.classList.contains("show") && e.target === scan) await closeScanModal();
+      if (prod && prod.classList.contains("show") && e.target === prod) await closeProductModal();
     });
 
     document.addEventListener("keydown", async (e) => {
@@ -362,8 +345,8 @@
       const scan = document.getElementById("scanModal");
       const prod = document.getElementById("productModal");
 
-      if (scan.classList.contains("show")) await closeScanModal();
-      if (prod.classList.contains("show")) await closeProductModal();
+      if (scan && scan.classList.contains("show")) await closeScanModal();
+      if (prod && prod.classList.contains("show")) await closeProductModal();
     });
 
     function manualSearch(e){
@@ -416,13 +399,21 @@
         document.getElementById("pm_code").textContent = `PAT/Código: ${eq.barcode_pat || "-"}`;
         document.getElementById("pm_sector").textContent = `Setor: ${eq.sector || "-"}`;
         document.getElementById("pm_location").textContent = `Local: ${eq.location || "-"}`;
+        
+        let status_badge_class = "badge-success";
+        if (eq.status === "Manutenção") status_badge_class = "badge-warning";
+        if (eq.status === "Baixado") status_badge_class = "badge-danger";
+        
+        const statusEl = document.getElementById("pm_status");
+        statusEl.textContent = `Status: ${eq.status || "Ativo"}`;
+        statusEl.className = `badge ${status_badge_class}`;
 
         document.getElementById("pm_name").textContent = eq.name ? eq.name : "Nome: -";
         document.getElementById("pm_brand").textContent = `Marca: ${eq.brand || "-"}`;
         document.getElementById("pm_nf").textContent = `NF: ${eq.invoice_nf || "-"}`;
         document.getElementById("pm_value").textContent = `Valor: ${formatBRL(eq.value)}`;
 
-        const url = new URL("{{ url_for('main.equipments_list') }}", window.location.origin);
+        const url = new URL("{{ url_for('equipments.equipments_list') }}", window.location.origin);
         url.searchParams.set("q", eq.barcode_pat || text);
         document.getElementById("pm_open").href = url.toString();
 
@@ -451,7 +442,7 @@
       document.getElementById("pm_nf").textContent = "NF: -";
       document.getElementById("pm_value").textContent = "Valor: -";
 
-      const url = new URL("{{ url_for('main.equipments_list') }}", window.location.origin);
+      const url = new URL("{{ url_for('equipments.equipments_list') }}", window.location.origin);
       url.searchParams.set("q", code);
       document.getElementById("pm_open").href = url.toString();
     }

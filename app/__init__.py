@@ -1,8 +1,10 @@
 from flask import Flask, redirect, url_for, session, request
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 from pathlib import Path
 
 db = SQLAlchemy()
+migrate = Migrate()
 
 
 def create_app():
@@ -16,13 +18,23 @@ def create_app():
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     db.init_app(app)
+    migrate.init_app(app, db)
 
     # importa models (pra criar tabelas)
-    from .models import Location, Sector, Equipment  # noqa: F401
+    from .models import Location, Sector, Equipment, AlmoxItem, AlmoxMovement  # noqa: F401
 
-    # registra blueprints
-    from .routes import bp as main_bp
+    # registra blueprints refatorados
+    from .routes.main_routes import bp as main_bp
+    from .routes.locations_routes import bp as locations_bp
+    from .routes.equipments_routes import bp as equipments_bp
+    from .routes.almoxarifado_routes import bp as almoxarifado_bp
+    from .routes.api_routes import bp as api_bp
+
     app.register_blueprint(main_bp)
+    app.register_blueprint(locations_bp)
+    app.register_blueprint(equipments_bp)
+    app.register_blueprint(almoxarifado_bp)
+    app.register_blueprint(api_bp)
 
     # auth blueprint (login/logout)
     from .auth import bp as auth_bp
@@ -46,8 +58,7 @@ def create_app():
         return None
 
     with app.app_context():
-        db.create_all()
-        # ✅ REMOVIDO: qualquer seed automático (evita duplicidade)
+        pass
         # _seed_sectors()
 
     return app

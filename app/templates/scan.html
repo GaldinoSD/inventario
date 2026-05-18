@@ -3,7 +3,7 @@
 {% block content %}
 <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
   <h1 style="margin:0;">Pesquisar por PAT/Código</h1>
-  <a class="btn" href="{{ url_for('main.equipments_list') }}">Ver equipamentos</a>
+  <a class="btn" href="{{ url_for('equipments.equipments_list') }}">Ver equipamentos</a>
 </div>
 
 <section style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
@@ -39,7 +39,7 @@
           {% if result.invoice_nf %}<span class="badge">NF: {{ result.invoice_nf }}</span>{% endif %}
         </div>
         <div style="margin-top:10px;">
-          <a class="btn" href="{{ url_for('main.equipments_edit', equipment_id=result.id) }}">Editar equipamento</a>
+          <a class="btn" href="{{ url_for('equipments.equipments_update', equipment_id=result.id) }}">Editar equipamento</a>
         </div>
       </div>
     {% endif %}
@@ -144,7 +144,7 @@ async function startScan(){
 
         await stopScan(true);
 
-        window.location.href = "{{ url_for('main.scan_page') }}" + "?code=" + encodeURIComponent(code);
+        window.location.href = "{{ url_for('api.scan_page') }}" + "?code=" + encodeURIComponent(code);
       },
       () => {}
     );

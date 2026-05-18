@@ -3,7 +3,7 @@
 {% block content %}
 <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
   <h1 style="margin:0;">{{ 'Editar' if equipment else 'Novo' }} Equipamento</h1>
-  <a class="btn" href="{{ url_for('main.equipments_list') }}">Voltar</a>
+  <a class="btn" href="{{ url_for('equipments.equipments_list') }}">Voltar</a>
 </div>
 
 <form method="post" class="card" style="padding:16px;margin-top:12px;display:grid;gap:12px;">
@@ -62,8 +62,8 @@
 
   <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
     <button class="btn btn-orange" type="submit">Salvar</button>
-    <a class="btn" href="{{ url_for('main.equipments_list') }}">Cancelar</a>
-    <a class="btn" href="{{ url_for('main.scan_page') }}">Testar leitor (câmera)</a>
+    <a class="btn" href="{{ url_for('equipments.equipments_list') }}">Cancelar</a>
+    <a class="btn" href="{{ url_for('api.scan_page') }}">Testar leitor (câmera)</a>
   </div>
 
   <p class="muted small" style="margin:0;">
