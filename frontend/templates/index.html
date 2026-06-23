@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Dashboard — Inventário{% endblock %}
-{% block content %}
+{% block content %}<!-- aria-label placeholder label -->
 
 <!-- ===================== HERO / RESUMO ===================== -->
 <div class="page-header">
@@ -44,7 +44,7 @@
 
   <!-- SETORES -->
   <div class="card kpi-card">
-    <div class="kpi-icon-wrap kpi-icon-purple-alt">
+    <div class="kpi-icon-wrap kpi-icon-rose">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
     </div>
     <div class="kpi-value">{{ counts.sectors }}</div>
@@ -335,7 +335,7 @@
     background: rgba(59, 130, 246, 0.12);
     color: #3b82f6;
   }
-  .kpi-icon-purple-alt {
+  .kpi-icon-rose {
     background: rgba(236, 72, 153, 0.12);
     color: #ec4899;
   }

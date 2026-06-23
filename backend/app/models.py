@@ -15,6 +15,13 @@ class User(db.Model):
     role = db.Column(db.String(32), default="viewer") # 'admin', 'viewer'
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    # Permissões do Sistema (Checkboxes)
+    can_view_dashboard = db.Column(db.Boolean, default=True, nullable=False)
+    can_manage_locations = db.Column(db.Boolean, default=False, nullable=False)
+    can_manage_equipments = db.Column(db.Boolean, default=False, nullable=False)
+    can_manage_almoxarifado = db.Column(db.Boolean, default=False, nullable=False)
+    can_manage_users = db.Column(db.Boolean, default=False, nullable=False)
+
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
@@ -124,15 +131,74 @@ class Equipment(db.Model):
         return f"<Equipment {self.name} ({self.barcode_pat})>"
 
 
+class Shelf(db.Model):
+    """Estante do almoxarifado."""
+    __tablename__ = "shelves"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), unique=True, nullable=False, index=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    levels = db.relationship(
+        "ShelfLevel",
+        back_populates="shelf",
+        cascade="all, delete-orphan",
+        lazy=True,
+        order_by="ShelfLevel.label",
+    )
+
+    items = db.relationship(
+        "AlmoxItem",
+        back_populates="shelf",
+        lazy=True,
+    )
+
+    def __repr__(self):
+        return f"<Shelf {self.id} {self.name}>"
+
+
+class ShelfLevel(db.Model):
+    """Prateleira dentro de uma estante."""
+    __tablename__ = "shelf_levels"
+
+    id = db.Column(db.Integer, primary_key=True)
+    label = db.Column(db.String(10), nullable=False)
+    shelf_id = db.Column(db.Integer, db.ForeignKey("shelves.id"), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    shelf = db.relationship("Shelf", back_populates="levels")
+
+    items = db.relationship(
+        "AlmoxItem",
+        back_populates="shelf_level",
+        lazy=True,
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint("shelf_id", "label", name="uq_shelf_level_label"),
+    )
+
+    def __repr__(self):
+        return f"<ShelfLevel {self.id} {self.label} shelf={self.shelf_id}>"
+
+
 class AlmoxItem(db.Model):
     __tablename__ = "almox_items"
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(160), nullable=False, unique=True, index=True)
     qty = db.Column(db.Integer, nullable=False, default=0)
+    location = db.Column(db.String(180), nullable=True)
+
+    # Vínculo opcional com estante/prateleira
+    shelf_id = db.Column(db.Integer, db.ForeignKey("shelves.id"), nullable=True, index=True)
+    shelf_level_id = db.Column(db.Integer, db.ForeignKey("shelf_levels.id"), nullable=True, index=True)
 
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    shelf = db.relationship("Shelf", back_populates="items")
+    shelf_level = db.relationship("ShelfLevel", back_populates="items")
 
     movements = db.relationship(
         "AlmoxMovement",

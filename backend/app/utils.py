@@ -8,7 +8,7 @@ ALLOWED_NF_EXT = {"png", "jpg", "jpeg", "webp", "pdf"}
 def _ensure_nf_upload_folder():
     folder = current_app.config.get("NF_UPLOAD_FOLDER")
     if not folder:
-        folder = os.path.join(current_app.root_path, "static", "uploads", "nf")
+        folder = os.path.join(current_app.static_folder, "uploads", "nf")
         current_app.config["NF_UPLOAD_FOLDER"] = folder
     os.makedirs(folder, exist_ok=True)
     return folder
@@ -38,7 +38,7 @@ def _delete_nf_file(filename: str | None):
     if not filename:
         return
     folder = current_app.config.get("NF_UPLOAD_FOLDER") or os.path.join(
-        current_app.root_path, "static", "uploads", "nf"
+        current_app.static_folder, "uploads", "nf"
     )
     path = os.path.join(folder, filename)
     try:

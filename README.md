@@ -11,7 +11,12 @@ Sistema inicial com:
 - pip
 
 ## Como rodar (Windows / Linux)
-1) Crie e ative um virtualenv:
+1) Navegue para a pasta backend:
+```bash
+cd backend
+```
+
+2) Crie e ative um virtualenv:
 ```bash
 python -m venv venv
 # Windows:
@@ -20,12 +25,12 @@ venv\Scripts\activate
 source venv/bin/activate
 ```
 
-2) Instale dependências:
+3) Instale dependências:
 ```bash
 pip install -r requirements.txt
 ```
 
-3) Rode o servidor:
+4) Rode o servidor:
 ```bash
 python run.py
 ```
@@ -33,16 +38,12 @@ python run.py
 Abra: http://127.0.0.1:5000
 
 ## Primeira execução (seed)
-Na primeira execução, o sistema cria o banco `instance/app.db` e
+Na primeira execução, o sistema cria o banco `backend/instance/app.db` e
 pré-cadastra os setores padrão: Ministério de Louvor, Administrativo, Mídia, Geral.
 
 ## Estrutura
-- `app/` aplicação Flask
-- `app/models.py` modelos (SQLAlchemy)
-- `app/routes.py` rotas (CRUD + busca)
-- `app/templates/` páginas
-- `app/static/` CSS
-- `instance/app.db` banco SQLite (criado ao rodar)
+- `backend/` códigos e banco de dados do Backend
+- `frontend/` páginas e estilos do Frontend
 
 ## Observações
 - `barcode_pat` (PAT/código) é **único** por equipamento.

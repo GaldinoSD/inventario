@@ -1,0 +1,979 @@
+{% extends "base.html" %}
+{% block title %}Almoxarifado{% endblock %}
+
+{% block content %}
+<div class="page-header" style="flex-wrap:wrap;gap:16px;">
+  <div class="page-header-text" style="min-width:220px;">
+    <h1 class="page-title">Almoxarifado</h1>
+    <p class="page-desc">Controle de estoque — materiais e ferramentas da igreja.</p>
+  </div>
+</div>
+
+<!-- ===================== SUB-TABS ===================== -->
+<div class="nav-tabs" style="margin-top:8px;" id="mainTabs">
+  <button class="nav-tab active" type="button" onclick="switchMainTab('estoque')">Estoque</button>
+  <button class="nav-tab" type="button" onclick="switchMainTab('estantes')">Estantes</button>
+</div>
+
+<!-- =============================================================== -->
+<!-- TAB: ESTOQUE                                                    -->
+<!-- =============================================================== -->
+<div id="tabEstoque">
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px;">
+    <input id="stockSearch" class="input" placeholder="Pesquisar item..." style="width:220px;height:40px;font-size:0.85rem;" aria-label="Pesquisar item">
+    <button class="btn" type="button" onclick="clearStockSearch()" style="height:40px;font-size:0.85rem;">Limpar</button>
+    <button class="btn btn-orange" type="button" onclick="openModal('modalAddItem')" style="height:40px;">Cadastrar item</button>
+    <button class="btn" type="button" onclick="openModal('modalHistorico')" style="height:40px;">Histórico</button>
+  </div>
+
+  <div class="card" style="margin-top:14px; padding:14px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+      <div style="font-weight:900;">Estoque geral</div>
+      <div class="muted small">Clique no item para editar / registrar entrada / saída</div>
+    </div>
+
+    <div style="margin-top:10px; overflow:auto; max-height:56vh; border:1px solid rgba(255,255,255,.08); border-radius:12px;">
+      <table class="table" style="width:100%; border-collapse:collapse;">
+        <thead style="position:sticky; top:0; background:var(--bg-main); backdrop-filter: blur(8px); z-index:1;">
+          <tr>
+            <th style="text-align:left;">Item</th>
+            <th style="text-align:left; width:220px;">Estante / Prateleira</th>
+            <th style="text-align:right; width:140px;">Quantidade</th>
+          </tr>
+        </thead>
+        <tbody id="stockBody">
+          {% if items and items|length > 0 %}
+            {% for it in items %}
+              <tr
+                class="stock-row"
+                style="cursor:pointer;"
+                onclick="openItemModal(this)"
+                data-id="{{ it.id }}"
+                data-name="{{ it.name }}"
+                data-qty="{{ it.qty }}"
+                data-location="{{ it.location or '' }}"
+                data-shelf-id="{{ it.shelf_id or '' }}"
+                data-shelf-level-id="{{ it.shelf_level_id or '' }}"
+                data-shelf-name="{{ it.shelf.name if it.shelf else '' }}"
+                data-shelf-level-label="{{ it.shelf_level.label if it.shelf_level else '' }}"
+              >
+                <td style="padding:10px 8px;">
+                  <div style="font-weight:800;">{{ it.name }}</div>
+                  <div class="muted small">ID: {{ it.id }}</div>
+                </td>
+                <td style="padding:10px 8px;" class="muted small">
+                  {% if it.shelf %}
+                    <span style="display:inline-flex; align-items:center; gap:4px; color:var(--text-main);">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--orange);"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line></svg>
+                      {{ it.shelf.name }}{% if it.shelf_level %} — {{ it.shelf_level.label }}{% endif %}
+                    </span>
+                  {% elif it.location %}
+                    <span style="display:inline-flex; align-items:center; gap:4px; color:var(--text-main);">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--orange);"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                      {{ it.location }}
+                    </span>
+                  {% else %}
+                    <span class="muted">–</span>
+                  {% endif %}
+                </td>
+                <td style="padding:10px 8px; text-align:right; font-weight:900;">
+                  {{ it.qty }}
+                </td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="3" style="padding:12px;" class="muted">
+                Nenhum item cadastrado ainda.
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    <div id="stockEmpty" class="muted small" style="display:none; margin-top:10px;">
+      Nenhum item encontrado com esse filtro.
+    </div>
+  </div>
+</div>
+
+<!-- =============================================================== -->
+<!-- TAB: ESTANTES                                                   -->
+<!-- =============================================================== -->
+<div id="tabEstantes" style="display:none;">
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px;">
+    <input id="shelfSearch" class="input" placeholder="Pesquisar estante..." style="width:220px;height:40px;font-size:0.85rem;" aria-label="Pesquisar estante">
+    <button class="btn" type="button" onclick="clearShelfSearch()" style="height:40px;font-size:0.85rem;">Limpar</button>
+    <button class="btn btn-orange" type="button" onclick="openModal('modalAddShelf')" style="height:40px;">Nova estante</button>
+  </div>
+
+  <div style="margin-top:14px; display:flex; flex-direction:column; gap:12px;" id="shelvesContainer">
+    {% if shelves and shelves|length > 0 %}
+      {% for shelf in shelves %}
+        <div class="shelf-card card" data-shelf-name="{{ shelf.name|lower }}">
+          <!-- Header -->
+          <div class="shelf-card-header" onclick="toggleShelfCard(this)">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <div class="shelf-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line></svg>
+              </div>
+              <div>
+                <div style="font-weight:900; font-size:1.05rem;">{{ shelf.name }}</div>
+                <div class="muted small">{{ shelf.levels|length }} prateleira(s) · {{ shelf.items|length }} item(ns)</div>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="badge">{{ shelf.items|length }} itens</span>
+              <svg class="shelf-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+          </div>
+
+          <!-- Body (hidden by default) -->
+          <div class="shelf-card-body" style="display:none;">
+            {% for level in shelf.levels %}
+              {% set level_items = [] %}
+              {% for item in shelf.items if item.shelf_level_id == level.id %}
+                {% if level_items.append(item) %}{% endif %}
+              {% endfor %}
+              <div class="shelf-level-row">
+                <div class="shelf-level-label">
+                  <span class="shelf-level-badge">{{ level.label }}</span>
+                  <span class="muted small">{{ level_items|length }} item(ns)</span>
+                </div>
+                <div class="shelf-level-items">
+                  {% if level_items|length > 0 %}
+                    {% for item in level_items %}
+                      <div class="shelf-item-chip">
+                        <span style="font-weight:700;">{{ item.name }}</span>
+                        <span class="badge" style="font-size:0.65rem; padding:2px 6px;">{{ item.qty }}</span>
+                      </div>
+                    {% endfor %}
+                  {% else %}
+                    <span class="muted small" style="font-style:italic;">Vazia</span>
+                  {% endif %}
+                </div>
+              </div>
+            {% endfor %}
+
+            <!-- Items without a level -->
+            {% set unleveled = [] %}
+            {% for item in shelf.items if not item.shelf_level_id %}
+              {% if unleveled.append(item) %}{% endif %}
+            {% endfor %}
+            {% if unleveled|length > 0 %}
+              <div class="shelf-level-row">
+                <div class="shelf-level-label">
+                  <span class="shelf-level-badge" style="background:var(--text-muted); color:var(--bg-surface);">?</span>
+                  <span class="muted small">Sem prateleira definida</span>
+                </div>
+                <div class="shelf-level-items">
+                  {% for item in unleveled %}
+                    <div class="shelf-item-chip">
+                      <span style="font-weight:700;">{{ item.name }}</span>
+                      <span class="badge" style="font-size:0.65rem; padding:2px 6px;">{{ item.qty }}</span>
+                    </div>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endif %}
+
+            <!-- Actions -->
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; padding-top:12px; border-top:1px solid var(--border);">
+              <form method="POST" action="{{ url_for('almoxarifado.almoxarifado_shelf_add_level') }}" style="margin:0;">
+                <input type="hidden" name="shelf_id" value="{{ shelf.id }}">
+                <button class="btn" type="submit" style="font-size:0.8rem; padding:6px 12px;">+ Prateleira</button>
+              </form>
+              <button class="btn" type="button" onclick="openRenameShelf({{ shelf.id }}, '{{ shelf.name }}')" style="font-size:0.8rem; padding:6px 12px;">Renomear</button>
+              <form method="POST" action="{{ url_for('almoxarifado.almoxarifado_shelf_delete') }}" style="margin:0;"
+                    onsubmit="return confirm('Excluir estante \'{{ shelf.name }}\'? Os itens serão desvinculados.');">
+                <input type="hidden" name="shelf_id" value="{{ shelf.id }}">
+                <button class="btn btn-danger" type="submit" style="font-size:0.8rem; padding:6px 12px;">Excluir estante</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="card" style="padding:24px; text-align:center;">
+        <div class="muted">Nenhuma estante cadastrada ainda.</div>
+        <button class="btn btn-orange" type="button" onclick="openModal('modalAddShelf')" style="margin-top:12px;">Criar primeira estante</button>
+      </div>
+    {% endif %}
+  </div>
+
+  <div id="shelfEmpty" class="muted small" style="display:none; margin-top:10px;">
+    Nenhuma estante encontrada com esse filtro.
+  </div>
+</div>
+
+
+<!-- ===================== MODAL: CADASTRAR ITEM ===================== -->
+<div class="modal-backdrop" id="modalAddItem" aria-hidden="true">
+  <div class="modal card modal-md" role="dialog" aria-modal="true" aria-labelledby="addTitle">
+    <div class="modal-header">
+      <div>
+        <div id="addTitle" style="font-weight:900;">Cadastrar item</div>
+        <div class="muted small">Nome + quantidade (entrada no estoque)</div>
+      </div>
+      <button class="btn" type="button" onclick="closeModal('modalAddItem')">Fechar</button>
+    </div>
+
+    <div class="modal-body">
+      <form method="POST" action="{{ url_for('almoxarifado.almoxarifado_add_item') }}" class="form-grid">
+        <div class="field col-6">
+          <label>Nome do item</label>
+          <input class="input" name="name" placeholder="Ex: Saco de cimento, Alicate..." required>
+        </div>
+
+        <div class="field col-3">
+          <label>Estante (opcional)</label>
+          <select class="input" name="shelf_id" id="addShelfSelect" onchange="loadLevelsForSelect(this.value, 'addLevelSelect')">
+            <option value="">— Nenhuma —</option>
+            {% for s in shelves %}
+              <option value="{{ s.id }}">{{ s.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="field col-3">
+          <label>Prateleira</label>
+          <select class="input" name="shelf_level_id" id="addLevelSelect" disabled>
+            <option value="">— Selecione estante —</option>
+          </select>
+        </div>
+
+        <div class="field col-6">
+          <label>Localização livre (opcional)</label>
+          <input class="input" name="location" placeholder="Ex: Sala 3, Depósito...">
+        </div>
+
+        <div class="field col-3">
+          <label>Quantidade</label>
+          <input class="input" name="qty" type="number" min="1" step="1" value="1" required>
+        </div>
+
+        <div class="field col-12 actions" style="display:flex; justify-content:flex-end; gap:10px;">
+          <button class="btn btn-orange" type="submit">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL ITEM (PADRÃO ÚNICO) ===================== -->
+<div class="modal-backdrop" id="modalItem" aria-hidden="true">
+  <div class="modal card modal-lg"
+       role="dialog" aria-modal="true" aria-labelledby="itemTitle">
+
+    <div class="modal-header" style="flex:0 0 auto;">
+      <div style="display:flex; flex-direction:column; gap:4px;">
+        <div id="itemTitle" style="font-weight:900;">Item</div>
+        <div class="muted small" id="itemSub">Gerenciar estoque</div>
+
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">
+          <span class="badge" id="it_id_badge">ID: -</span>
+          <span class="badge" id="it_stock_badge">Estoque: -</span>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:10px; align-items:center;">
+        <button class="btn btn-danger" type="button" onclick="toggleDelete()">Excluir</button>
+        <button class="btn" type="button" onclick="closeModal('modalItem')">Fechar</button>
+      </div>
+    </div>
+
+    <div class="modal-body" style="flex:1 1 auto; overflow:auto; padding-bottom:14px;">
+
+      <!-- Tabs -->
+      <div style="margin-bottom:16px;">
+        <div class="nav-tabs">
+          <button class="nav-tab active" type="button" id="tabEntrada" onclick="setMode('ENTRADA')">Entrada</button>
+          <button class="nav-tab" type="button" id="tabSaida" onclick="setMode('SAIDA')">Saída</button>
+          <button class="nav-tab" type="button" id="tabEditar" onclick="setMode('EDITAR_NOME')">Editar item</button>
+        </div>
+      </div>
+
+      <!-- ✅ PAINEL PADRÃO ÚNICO -->
+      <div class="card" style="padding:14px; margin-bottom:12px; min-height:420px; display:flex; flex-direction:column;">
+        <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:flex-start;">
+          <div>
+            <div style="font-weight:900;" id="modeTitle">Registrar entrada</div>
+            <div class="muted small" id="modeSubtitle">Soma no estoque</div>
+          </div>
+        </div>
+
+        <!-- ✅ UM FORM PRA TUDO -->
+        <form method="POST" action="{{ url_for('almoxarifado.almoxarifado_movimento') }}"
+              class="form-grid" style="margin-top:12px; flex:1;">
+          <input type="hidden" name="item_id" id="u_item_id">
+          <input type="hidden" name="type" id="u_type" value="ENTRADA">
+
+          <!-- Campo: nome e localização (só no editar) -->
+          <div class="field col-6" id="wrap_name" style="display:none;">
+            <label>Novo nome</label>
+            <input class="input" name="name" id="u_name" placeholder="Digite o novo nome..." />
+          </div>
+
+          <div class="field col-6" id="wrap_location_edit" style="display:none;">
+            <label>Localização livre (opcional)</label>
+            <input class="input" name="location" id="u_location_edit" placeholder="Ex: Sala 3, Depósito..." />
+          </div>
+
+          <!-- Campo: estante/prateleira (só no editar) -->
+          <div class="field col-6" id="wrap_shelf_edit" style="display:none;">
+            <label>Estante</label>
+            <select class="input" name="shelf_id" id="u_shelf_select" onchange="loadLevelsForSelect(this.value, 'u_level_select')">
+              <option value="">— Nenhuma —</option>
+              {% for s in shelves %}
+                <option value="{{ s.id }}">{{ s.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="field col-6" id="wrap_level_edit" style="display:none;">
+            <label>Prateleira</label>
+            <select class="input" name="shelf_level_id" id="u_level_select" disabled>
+              <option value="">— Selecione estante —</option>
+            </select>
+          </div>
+
+          <!-- Campo: tipo da saída (só no modo SAIDA) -->
+          <div class="field col-4" id="wrap_saida_tipo" style="display:none;">
+            <label>Tipo</label>
+            <select class="input" name="subtype" id="u_saida_tipo">
+              <option value="USO">SAÍDA (uso)</option>
+              <option value="PERDA">PERDA</option>
+              <option value="DANO">DANIFICADO</option>
+            </select>
+          </div>
+
+          <!-- Campo: quantidade (Entrada + Saída) -->
+          <div class="field col-4" id="wrap_qty">
+            <label>Quantidade</label>
+            <input class="input" name="qty" id="u_qty" type="number" min="1" step="1" value="1">
+            <div class="muted small" id="u_qty_warn" style="display:none; margin-top:6px;">Quantidade maior que o estoque.</div>
+          </div>
+
+          <!-- Campo: estoque atual (só na Saída) -->
+          <div class="field col-4" id="wrap_stock" style="display:none;">
+            <label>Estoque atual</label>
+            <input class="input" id="u_stock" type="text" value="-" readonly>
+          </div>
+
+          <!-- Campo: motivo -->
+          <div class="field col-8" id="wrap_motivo">
+            <label>Motivo <span class="muted small" id="motivoHint">(opcional)</span></label>
+            <input class="input" name="motivo" id="u_motivo" placeholder="Ex: compra, reposição, instalação..." />
+          </div>
+
+          <!-- Campo: local (só na saída, opcional) -->
+          <div class="field col-4" id="wrap_local" style="display:none;">
+            <label>Local (opcional)</label>
+            <input class="input" name="local" id="u_local" placeholder="Ex: Obra X / POP Y..." />
+          </div>
+
+          <div class="field col-12 actions" style="display:flex; justify-content:flex-end; gap:10px; margin-top:auto; padding-top:20px;">
+            <button class="btn btn-orange" id="u_submit" type="submit">Registrar</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Excluir (colapsável) -->
+      <div id="paneDelete" class="card" style="padding:14px; display:none;">
+        <div style="font-weight:900;">Excluir item</div>
+        <div class="muted small">Isso remove também o histórico dele.</div>
+
+        <form method="POST" action="{{ url_for('almoxarifado.almoxarifado_item_delete') }}"
+              onsubmit="return confirm('Excluir este item? Isso remove também o histórico dele.');"
+              style="margin-top:10px;">
+          <input type="hidden" name="item_id" id="del_item_id">
+          <button class="btn btn-danger" type="submit" style="width:100%;">Confirmar exclusão</button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL: HISTÓRICO ===================== -->
+<div class="modal-backdrop" id="modalHistorico" aria-hidden="true">
+  <div class="modal card modal-lg" role="dialog" aria-modal="true" aria-labelledby="histTitle">
+    <div class="modal-header">
+      <div>
+        <div id="histTitle" style="font-weight:900;">Histórico de movimentações</div>
+        <div class="muted small">Pesquise e clique em uma linha para ver detalhes</div>
+      </div>
+      <button class="btn" type="button" onclick="closeModal('modalHistorico')">Fechar</button>
+    </div>
+
+    <div class="modal-body">
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+        <input id="histSearch" class="input" placeholder="Pesquisar no histórico (item, tipo, local, motivo...)" style="flex:1 1 320px;" aria-label="Pesquisar histórico">
+        <button class="btn" type="button" onclick="clearHistSearch()">Limpar</button>
+      </div>
+
+      <div style="overflow:auto; max-height:60vh; border:1px solid rgba(255,255,255,.08); border-radius:12px;">
+        <table class="table" style="width:100%; border-collapse:collapse;">
+          <thead style="position:sticky; top:0; background:var(--bg-main); backdrop-filter: blur(8px); z-index:1;">
+            <tr>
+              <th style="text-align:left; width:160px;">Data</th>
+              <th style="text-align:left;">Item</th>
+              <th style="text-align:left; width:120px;">Tipo</th>
+              <th style="text-align:right; width:90px;">Qtd</th>
+              <th style="text-align:left;">Local</th>
+              <th style="text-align:left;">Motivo</th>
+            </tr>
+          </thead>
+
+          <tbody id="histBody">
+            {% if movements and movements|length > 0 %}
+              {% for m in movements %}
+                <tr
+                  class="hist-row"
+                  style="cursor:pointer;"
+                  onclick="openMovementDetail(this)"
+                  data-date="{{ m.created_at.strftime('%d/%m/%Y %H:%M') if m.created_at else '-' }}"
+                  data-item="{{ m.item_name }}"
+                  data-type="{{ m.type }}"
+                  data-qty="{{ m.qty }}"
+                  data-local="{{ m.local or '-' }}"
+                  data-motivo="{{ m.motivo or '-' }}"
+                  data-itemid="{{ m.item_id }}"
+                  data-search="{{ (m.item_name ~ ' ' ~ m.type ~ ' ' ~ (m.local or '') ~ ' ' ~ (m.motivo or '') ~ ' ' ~ (m.item_id|string))|lower }}"
+                >
+                  <td style="padding:10px 8px;" class="muted small">
+                    {{ m.created_at.strftime('%d/%m/%Y %H:%M') if m.created_at else '-' }}
+                  </td>
+                  <td style="padding:10px 8px;">
+                    <div style="font-weight:800;">{{ m.item_name }}</div>
+                    <div class="muted small">Item ID: {{ m.item_id }}</div>
+                  </td>
+                  <td style="padding:10px 8px;">
+                    <span class="badge">{{ m.type }}</span>
+                  </td>
+                  <td style="padding:10px 8px; text-align:right; font-weight:900;">
+                    {{ m.qty }}
+                  </td>
+                  <td style="padding:10px 8px;" class="muted">
+                    {{ m.local or '-' }}
+                  </td>
+                  <td style="padding:10px 8px;" class="muted">
+                    {{ m.motivo or '-' }}
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="6" style="padding:12px;" class="muted">
+                  Sem movimentações registradas ainda.
+                </td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+
+      <div id="histEmpty" class="muted small" style="display:none; margin-top:10px;">
+        Nenhum registro encontrado com esse filtro.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL: DETALHE DO HISTÓRICO ===================== -->
+<div class="modal-backdrop" id="modalMovDetail" aria-hidden="true">
+  <div class="modal card modal-md" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+    <div class="modal-header">
+      <div>
+        <div id="detailTitle" style="font-weight:900;">Detalhe da movimentação</div>
+        <div class="muted small">Informações registradas</div>
+      </div>
+      <button class="btn" type="button" onclick="closeModal('modalMovDetail')">Fechar</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="card" style="padding:14px; display:grid; gap:10px;">
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <span class="badge" id="d_type">Tipo: -</span>
+          <span class="badge" id="d_qty">Qtd: -</span>
+          <span class="badge" id="d_date">Data: -</span>
+        </div>
+
+        <div style="display:grid; gap:6px;">
+          <div style="font-weight:900; font-size:1.05rem;" id="d_item">Item: -</div>
+          <div class="muted small" id="d_itemid">Item ID: -</div>
+          <div class="muted small" id="d_local">Local: -</div>
+          <div class="muted small" id="d_motivo">Motivo: -</div>
+        </div>
+      </div>
+
+      <div class="modal-actions" style="margin-top:12px; display:flex; justify-content:flex-end; gap:10px;">
+        <button class="btn" type="button" onclick="closeModal('modalMovDetail')">Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL: NOVA ESTANTE ===================== -->
+<div class="modal-backdrop" id="modalAddShelf" aria-hidden="true">
+  <div class="modal card modal-sm" role="dialog" aria-modal="true" aria-labelledby="addShelfTitle">
+    <div class="modal-header">
+      <div>
+        <div id="addShelfTitle" style="font-weight:900;">Nova estante</div>
+        <div class="muted small">Informe o nome e o número de prateleiras</div>
+      </div>
+      <button class="btn" type="button" onclick="closeModal('modalAddShelf')">Fechar</button>
+    </div>
+
+    <div class="modal-body">
+      <form method="POST" action="{{ url_for('almoxarifado.almoxarifado_shelf_add') }}" class="form-grid">
+        <div class="field col-12">
+          <label>Nome da estante</label>
+          <input class="input" name="name" placeholder="Ex: Estante 1, Armário Principal..." required>
+        </div>
+
+        <div class="field col-6">
+          <label>Nº de prateleiras</label>
+          <input class="input" name="level_count" id="shelfLevelCount" type="number" min="1" max="26" step="1" value="4" required oninput="updateShelfPreview()">
+        </div>
+
+        <div class="field col-6">
+          <label>Preview</label>
+          <div id="shelfPreview" class="muted small" style="padding:10px 0; font-weight:600;">A, B, C, D</div>
+        </div>
+
+        <div class="field col-12 actions" style="display:flex; justify-content:flex-end; gap:10px;">
+          <button class="btn btn-orange" type="submit">Criar estante</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL: RENOMEAR ESTANTE ===================== -->
+<div class="modal-backdrop" id="modalRenameShelf" aria-hidden="true">
+  <div class="modal card modal-sm" role="dialog" aria-modal="true" aria-labelledby="renameShelfTitle">
+    <div class="modal-header">
+      <div>
+        <div id="renameShelfTitle" style="font-weight:900;">Renomear estante</div>
+      </div>
+      <button class="btn" type="button" onclick="closeModal('modalRenameShelf')">Fechar</button>
+    </div>
+
+    <div class="modal-body">
+      <form method="POST" action="{{ url_for('almoxarifado.almoxarifado_shelf_rename') }}" class="form-grid">
+        <input type="hidden" name="shelf_id" id="renameShelfId">
+        <div class="field col-12">
+          <label>Novo nome</label>
+          <input class="input" name="name" id="renameShelfName" required>
+        </div>
+        <div class="field col-12 actions" style="display:flex; justify-content:flex-end; gap:10px;">
+          <button class="btn btn-orange" type="submit">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<script>
+  // ===================== GENERIC MODAL =====================
+  const ALL_MODALS = ["modalAddItem","modalHistorico","modalMovDetail","modalItem","modalAddShelf","modalRenameShelf"];
+
+  function openModal(id){
+    const m = document.getElementById(id);
+    if(!m) return;
+    m.classList.add("show");
+    m.setAttribute("aria-hidden", "false");
+  }
+
+  function closeModal(id){
+    const m = document.getElementById(id);
+    if(!m) return;
+    m.classList.remove("show");
+    m.setAttribute("aria-hidden", "true");
+  }
+
+  document.addEventListener("click", (e) => {
+    ALL_MODALS.forEach(id => {
+      const el = document.getElementById(id);
+      if(el && el.classList.contains("show") && e.target === el){
+        closeModal(id);
+      }
+    });
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if(e.key !== "Escape") return;
+    ALL_MODALS.forEach(closeModal);
+  });
+
+  // ===================== MAIN TAB SWITCH =====================
+  function switchMainTab(tab){
+    const tabs = document.querySelectorAll("#mainTabs .nav-tab");
+    tabs.forEach((t, i) => {
+      if((tab === "estoque" && i === 0) || (tab === "estantes" && i === 1)){
+        t.classList.add("active");
+      } else {
+        t.classList.remove("active");
+      }
+    });
+    document.getElementById("tabEstoque").style.display = tab === "estoque" ? "" : "none";
+    document.getElementById("tabEstantes").style.display = tab === "estantes" ? "" : "none";
+  }
+
+  // ===================== SHELF CARD ACCORDION =====================
+  function toggleShelfCard(header){
+    const body = header.nextElementSibling;
+    const chevron = header.querySelector(".shelf-chevron");
+    if(!body) return;
+    const isOpen = body.style.display !== "none";
+    body.style.display = isOpen ? "none" : "";
+    if(chevron) chevron.style.transform = isOpen ? "" : "rotate(180deg)";
+  }
+
+  // ===================== SHELF PREVIEW =====================
+  function updateShelfPreview(){
+    const count = Math.min(26, Math.max(1, parseInt(document.getElementById("shelfLevelCount").value) || 1));
+    const labels = [];
+    for(let i = 0; i < count; i++) labels.push(String.fromCharCode(65 + i));
+    document.getElementById("shelfPreview").textContent = labels.join(", ");
+  }
+
+  // ===================== RENAME SHELF =====================
+  function openRenameShelf(id, name){
+    document.getElementById("renameShelfId").value = id;
+    document.getElementById("renameShelfName").value = name;
+    openModal("modalRenameShelf");
+  }
+
+  // ===================== CASCADING SHELF → LEVEL SELECT =====================
+  async function loadLevelsForSelect(shelfId, levelSelectId){
+    const sel = document.getElementById(levelSelectId);
+    sel.innerHTML = '<option value="">— Carregando... —</option>';
+
+    if(!shelfId){
+      sel.innerHTML = '<option value="">— Selecione estante —</option>';
+      sel.disabled = true;
+      return;
+    }
+
+    try {
+      const resp = await fetch(`/almoxarifado/api/shelf/${shelfId}/levels`);
+      const levels = await resp.json();
+      sel.innerHTML = '<option value="">— Nenhuma —</option>';
+      levels.forEach(lv => {
+        const opt = document.createElement("option");
+        opt.value = lv.id;
+        opt.textContent = `Prateleira ${lv.label}`;
+        sel.appendChild(opt);
+      });
+      sel.disabled = false;
+    } catch(e){
+      sel.innerHTML = '<option value="">Erro ao carregar</option>';
+      sel.disabled = true;
+    }
+  }
+
+  // ===================== MODAL DO ITEM (PADRÃO ÚNICO) =====================
+  let CURRENT_STOCK = 0;
+  let CURRENT_LOCATION = "";
+  let CURRENT_SHELF_ID = "";
+  let CURRENT_SHELF_LEVEL_ID = "";
+  let CURRENT_MODE = "ENTRADA";
+
+  const el = (id) => document.getElementById(id);
+
+  function setActiveTab(mode){
+    const map = {
+      ENTRADA: el("tabEntrada"),
+      SAIDA: el("tabSaida"),
+      EDITAR_NOME: el("tabEditar"),
+    };
+    Object.keys(map).forEach(k => {
+      const b = map[k];
+      if(!b) return;
+      if(k === mode){
+        b.classList.add("active");
+      }else{
+        b.classList.remove("active");
+      }
+    });
+  }
+
+  function setMode(mode){
+    CURRENT_MODE = mode;
+    setActiveTab(mode);
+
+    const title = el("modeTitle");
+    const sub = el("modeSubtitle");
+    const hint = el("modeHint");
+    const submit = el("u_submit");
+    const motivoHint = el("motivoHint");
+
+    const wName = el("wrap_name");
+    const wLocEdit = el("wrap_location_edit");
+    const wShelfEdit = el("wrap_shelf_edit");
+    const wLevelEdit = el("wrap_level_edit");
+    const wTipo = el("wrap_saida_tipo");
+    const wQty  = el("wrap_qty");
+    const wStock = el("wrap_stock");
+    const wMotivo = el("wrap_motivo");
+    const wLocal = el("wrap_local");
+
+    const uType = el("u_type");
+    const uQty = el("u_qty");
+    const uName = el("u_name");
+    const uMotivo = el("u_motivo");
+    const uLocal = el("u_local");
+
+    uQty.required = false;
+    uName.required = false;
+
+    wName.style.display = "none";
+    if(wLocEdit) wLocEdit.style.display = "none";
+    if(wShelfEdit) wShelfEdit.style.display = "none";
+    if(wLevelEdit) wLevelEdit.style.display = "none";
+    wTipo.style.display = "none";
+    wQty.style.display = "none";
+    wStock.style.display = "none";
+    wMotivo.style.display = "none";
+    wLocal.style.display = "none";
+
+    const formEl = el("u_submit").closest("form");
+    if(mode === "EDITAR_NOME"){
+      formEl.action = "{{ url_for('almoxarifado.almoxarifado_item_update') }}";
+    }else{
+      formEl.action = "{{ url_for('almoxarifado.almoxarifado_movimento') }}";
+    }
+
+    if(mode === "ENTRADA"){
+      uType.value = "ENTRADA";
+      if(title) title.textContent = "Registrar entrada";
+      if(sub) sub.textContent = "Soma no estoque";
+      if(submit) submit.textContent = "Registrar entrada";
+      if(motivoHint) motivoHint.textContent = "(opcional)";
+
+      wQty.style.display = "";
+      wMotivo.style.display = "";
+
+      uQty.required = true;
+      uQty.value = 1;
+      uMotivo.placeholder = "Ex: compra, reposição...";
+      uLocal.value = "";
+      updateRules();
+
+    }else if(mode === "SAIDA"){
+      uType.value = "SAIDA";
+      if(title) title.textContent = "Registrar saída";
+      if(sub) sub.textContent = "Subtrai do estoque";
+      if(submit) submit.textContent = "Registrar saída";
+      if(motivoHint) motivoHint.textContent = "(obrigatório)";
+
+      wTipo.style.display = "";
+      wQty.style.display = "";
+      wStock.style.display = "";
+      wMotivo.style.display = "";
+      wLocal.style.display = "";
+
+      uQty.required = true;
+      uMotivo.required = true;
+
+      el("u_stock").value = CURRENT_STOCK;
+      uQty.value = 1;
+      uMotivo.placeholder = "Ex: instalação, extravio, quebrou...";
+      updateRules();
+
+    }else{ // EDITAR_NOME
+      uType.value = "EDITAR_NOME";
+      if(title) title.textContent = "Editar item";
+      if(sub) sub.textContent = "Altera nome, localização e estante do item";
+      if(submit) submit.textContent = "Salvar alterações";
+      if(motivoHint) motivoHint.textContent = "(opcional)";
+
+      wName.style.display = "";
+      if(wLocEdit) wLocEdit.style.display = "";
+      if(wShelfEdit) wShelfEdit.style.display = "";
+      if(wLevelEdit) wLevelEdit.style.display = "";
+      wMotivo.style.display = "";
+
+      uName.required = true;
+      uName.value = el("itemTitle").textContent || "";
+      if(el("u_location_edit")) el("u_location_edit").value = CURRENT_LOCATION;
+
+      // Set shelf select
+      const shelfSel = el("u_shelf_select");
+      if(shelfSel){
+        shelfSel.value = CURRENT_SHELF_ID || "";
+        if(CURRENT_SHELF_ID){
+          loadLevelsForSelect(CURRENT_SHELF_ID, "u_level_select").then(() => {
+            const lvSel = el("u_level_select");
+            if(lvSel && CURRENT_SHELF_LEVEL_ID) lvSel.value = CURRENT_SHELF_LEVEL_ID;
+          });
+        }
+      }
+
+      uMotivo.placeholder = "Opcional: motivo da alteração...";
+      updateRules();
+    }
+  }
+
+  function toggleDelete(){
+    const p = el("paneDelete");
+    if(!p) return;
+    p.style.display = (p.style.display === "none" || !p.style.display) ? "" : "none";
+  }
+
+  function openItemModal(row){
+    const id = row.dataset.id;
+    const name = row.dataset.name;
+    const qty = Number(row.dataset.qty || "0");
+    const location = row.dataset.location || "";
+    const shelfId = row.dataset.shelfId || "";
+    const shelfLevelId = row.dataset.shelfLevelId || "";
+
+    CURRENT_STOCK = qty;
+    CURRENT_LOCATION = location;
+    CURRENT_SHELF_ID = shelfId;
+    CURRENT_SHELF_LEVEL_ID = shelfLevelId;
+
+    el("itemTitle").textContent = name;
+    el("itemSub").textContent = "Gerenciar estoque";
+    el("it_id_badge").textContent = "ID: " + id;
+    el("it_stock_badge").textContent = "Estoque: " + qty;
+
+    el("u_item_id").value = id;
+    el("del_item_id").value = id;
+    const delPane = el("paneDelete");
+    if(delPane) delPane.style.display = "none";
+
+    setMode("ENTRADA");
+    openModal("modalItem");
+  }
+
+  // ===================== REGRAS (validar saída) =====================
+  const uQty = document.getElementById("u_qty");
+  const uWarn = document.getElementById("u_qty_warn");
+  const uSubmit = document.getElementById("u_submit");
+
+  function updateRules(){
+    if(CURRENT_MODE !== "SAIDA"){
+      if(uWarn) uWarn.style.display = "none";
+      if(uSubmit) uSubmit.disabled = false;
+      return;
+    }
+    const q = Number((uQty && uQty.value) ? uQty.value : "0");
+    const tooMuch = q > CURRENT_STOCK;
+
+    if(uWarn) uWarn.style.display = tooMuch ? "" : "none";
+    if(uSubmit) uSubmit.disabled = tooMuch;
+  }
+
+  if(uQty) uQty.addEventListener("input", updateRules);
+
+  // ===================== DETALHE DO HISTÓRICO =====================
+  function openMovementDetail(row){
+    const date = row.dataset.date || "-";
+    const item = row.dataset.item || "-";
+    const type = row.dataset.type || "-";
+    const qty = row.dataset.qty || "-";
+    const local = row.dataset.local || "-";
+    const motivo = row.dataset.motivo || "-";
+    const itemid = row.dataset.itemid || "-";
+
+    document.getElementById("d_type").textContent = "Tipo: " + type;
+    document.getElementById("d_qty").textContent = "Qtd: " + qty;
+    document.getElementById("d_date").textContent = "Data: " + date;
+
+    document.getElementById("d_item").textContent = "Item: " + item;
+    document.getElementById("d_itemid").textContent = "Item ID: " + itemid;
+    document.getElementById("d_local").textContent = "Local: " + local;
+    document.getElementById("d_motivo").textContent = "Motivo: " + motivo;
+
+    openModal("modalMovDetail");
+  }
+
+  // ===================== PESQUISA ESTOQUE =====================
+  const stockSearch = document.getElementById("stockSearch");
+  const stockRows = () => Array.from(document.querySelectorAll(".stock-row"));
+  const stockEmpty = document.getElementById("stockEmpty");
+
+  function applyStockFilter(){
+    const q = (stockSearch.value || "").trim().toLowerCase();
+    let visible = 0;
+
+    stockRows().forEach(r => {
+      const id = (r.dataset.id || "").toLowerCase();
+      const name = (r.dataset.name || "").toLowerCase();
+      const location = (r.dataset.location || "").toLowerCase();
+      const shelfName = (r.dataset.shelfName || "").toLowerCase();
+      const ok = !q || id.includes(q) || name.includes(q) || location.includes(q) || shelfName.includes(q);
+      r.style.display = ok ? "" : "none";
+      if(ok) visible++;
+    });
+
+    if(stockEmpty) stockEmpty.style.display = (q && visible === 0) ? "" : "none";
+  }
+
+  function clearStockSearch(){
+    stockSearch.value = "";
+    applyStockFilter();
+  }
+
+  if(stockSearch) stockSearch.addEventListener("input", applyStockFilter);
+
+  // ===================== PESQUISA HISTÓRICO =====================
+  const histSearch = document.getElementById("histSearch");
+  const histRows = () => Array.from(document.querySelectorAll(".hist-row"));
+  const histEmpty = document.getElementById("histEmpty");
+
+  function applyHistFilter(){
+    const q = (histSearch.value || "").trim().toLowerCase();
+    let visible = 0;
+
+    histRows().forEach(r => {
+      const search = (r.dataset.search || "");
+      const ok = !q || search.includes(q);
+      r.style.display = ok ? "" : "none";
+      if(ok) visible++;
+    });
+
+    if(histEmpty) histEmpty.style.display = (q && visible === 0) ? "" : "none";
+  }
+
+  function clearHistSearch(){
+    histSearch.value = "";
+    applyHistFilter();
+  }
+
+  if(histSearch) histSearch.addEventListener("input", applyHistFilter);
+
+  // ===================== PESQUISA ESTANTES =====================
+  const shelfSearch = document.getElementById("shelfSearch");
+  const shelfCards = () => Array.from(document.querySelectorAll(".shelf-card"));
+  const shelfEmpty = document.getElementById("shelfEmpty");
+
+  function applyShelfFilter(){
+    const q = (shelfSearch ? shelfSearch.value : "").trim().toLowerCase();
+    let visible = 0;
+
+    shelfCards().forEach(c => {
+      const name = (c.dataset.shelfName || "");
+      const ok = !q || name.includes(q);
+      c.style.display = ok ? "" : "none";
+      if(ok) visible++;
+    });
+
+    if(shelfEmpty) shelfEmpty.style.display = (q && visible === 0) ? "" : "none";
+  }
+
+  function clearShelfSearch(){
+    if(shelfSearch) shelfSearch.value = "";
+    applyShelfFilter();
+  }
+
+  if(shelfSearch) shelfSearch.addEventListener("input", applyShelfFilter);
+</script>
+
+{% endblock %}

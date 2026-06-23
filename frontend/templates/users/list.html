@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+
+{% block title %}Usuários — Inventário{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header-text">
+    <h1 class="page-title">Gerenciamento de Usuários</h1>
+    <p class="page-desc">Cadastre perfis de acesso e defina permissões específicas por meio de checkboxes.</p>
+  </div>
+  <div class="page-header-actions">
+    <button class="btn btn-orange" onclick="openCreateUserModal()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" y1="8" x2="19" y2="14"></line><line x1="22" y1="11" x2="16" y2="11"></line></svg>
+      <span>Cadastrar Usuário</span>
+    </button>
+  </div>
+</div>
+
+<div class="card" style="padding: 0; overflow: hidden;">
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Usuário</th>
+          <th>Permissões Ativas</th>
+          <th>Criado Em</th>
+          <th style="text-align: right; padding-right: 24px;">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td>
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div class="user-avatar" style="width: 32px; height: 32px; font-size: 0.85rem; box-shadow: none;">
+                {{ u.username[0] | upper }}
+              </div>
+              <div style="display: flex; flex-direction: column;">
+                <span style="font-weight: 700; font-size: 0.9rem;">{{ u.username }}</span>
+                <span style="font-size: 0.75rem; color: var(--text-muted);">ID: #{{ u.id }}</span>
+              </div>
+            </div>
+          </td>
+          <td>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+              {% if u.can_view_dashboard %}
+                <span class="badge badge-success" style="font-size: 0.65rem;">Dashboard</span>
+              {% else %}
+                <span class="badge" style="font-size: 0.65rem; border-color: var(--border); background: transparent; color: var(--text-muted);">Dashboard</span>
+              {% endif %}
+
+              {% if u.can_manage_locations %}
+                <span class="badge badge-success" style="font-size: 0.65rem;">Localizações</span>
+              {% endif %}
+
+              {% if u.can_manage_equipments %}
+                <span class="badge badge-success" style="font-size: 0.65rem;">Equipamentos</span>
+              {% endif %}
+
+              {% if u.can_manage_almoxarifado %}
+                <span class="badge badge-success" style="font-size: 0.65rem;">Almoxarifado</span>
+              {% endif %}
+
+              {% if u.can_manage_users %}
+                <span class="badge badge-success" style="font-size: 0.65rem; border-color: rgba(255, 106, 0, 0.4); color: var(--orange);">Usuários</span>
+              {% endif %}
+            </div>
+          </td>
+          <td class="muted small">
+            {{ u.created_at.strftime('%d/%m/%Y %H:%M') }}
+          </td>
+          <td style="text-align: right; padding-right: 24px;">
+            <div style="display: inline-flex; gap: 8px;">
+              <button class="btn" style="padding: 6px 12px; font-size: 0.8rem;" 
+                      onclick="openEditPermissionsModal('{{ u.id }}', '{{ u.username }}', {{ 'true' if u.can_view_dashboard else 'false' }}, {{ 'true' if u.can_manage_locations else 'false' }}, {{ 'true' if u.can_manage_equipments else 'false' }}, {{ 'true' if u.can_manage_almoxarifado else 'false' }}, {{ 'true' if u.can_manage_users else 'false' }})">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                <span>Permissões</span>
+              </button>
+              
+              {% if u.username != session.get('user_name') %}
+              <form action="{{ url_for('users.user_delete', user_id=u.id) }}" method="POST" onsubmit="return confirm('Deseja realmente excluir o usuário {{ u.username }}?')" style="display: inline;">
+                <button class="btn btn-danger" type="submit" style="padding: 6px 12px; font-size: 0.8rem;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                  <span>Excluir</span>
+                </button>
+              </form>
+              {% else %}
+              <button class="btn muted" style="padding: 6px 12px; font-size: 0.8rem; opacity: 0.5; cursor: not-allowed;" title="Você não pode excluir a si mesmo" disabled>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                <span>Excluir</span>
+              </button>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block modal %}
+<!-- ===================== MODAL CADASTRAR USUÁRIO ===================== -->
+<div class="modal-backdrop" id="createUserModal" aria-hidden="true">
+  <div class="modal card modal-md" role="dialog" aria-modal="true" aria-labelledby="createTitle">
+    <div class="modal-header">
+      <div>
+        <div id="createTitle" class="modal-header-title">Cadastrar Novo Usuário</div>
+        <div class="modal-header-desc">Crie a credencial de acesso ao painel.</div>
+      </div>
+      <button class="btn" type="button" onclick="closeCreateUserModal()">Fechar</button>
+    </div>
+
+    <form action="{{ url_for('users.user_create') }}" method="POST">
+      <div class="modal-body">
+        <div class="field">
+          <label for="createUsername">Nome de Usuário (Login)</label>
+          <input class="input" type="text" id="createUsername" name="username" placeholder="ex: joao.silva" required autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="createPassword">Senha Inicial</label>
+          <input class="input" type="password" id="createPassword" name="password" placeholder="Digite uma senha forte" required>
+        </div>
+        
+        <div style="font-size: 0.75rem; color: var(--text-muted); background: var(--bg-main); padding: 8px 12px; border-left: 3px solid var(--orange); margin-top: 4px;">
+          Por padrão, novos usuários têm acesso inicial apenas para visualizar o Dashboard. Gerencie permissões detalhadas após a criação usando o botão <strong>Permissões</strong> na listagem.
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn" type="button" onclick="closeCreateUserModal()">Cancelar</button>
+          <button class="btn btn-orange" type="submit">Cadastrar Usuário</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===================== MODAL EDITAR PERMISSÕES ===================== -->
+<div class="modal-backdrop" id="editPermissionsModal" aria-hidden="true">
+  <div class="modal card modal-md" role="dialog" aria-modal="true" aria-labelledby="editTitle">
+    <div class="modal-header">
+      <div>
+        <div id="editTitle" class="modal-header-title">Gerenciar Permissões</div>
+        <div class="modal-header-desc">Defina as áreas do sistema que o usuário <strong id="editTargetName">-</strong> poderá acessar.</div>
+      </div>
+      <button class="btn" type="button" onclick="closeEditPermissionsModal()">Fechar</button>
+    </div>
+
+    <form id="editPermissionsForm" method="POST">
+      <div class="modal-body">
+        
+        <!-- Campo Senha Opcional -->
+        <div class="field" style="margin-bottom: 12px;">
+          <label for="editPassword">Nova Senha (Opcional)</label>
+          <input class="input" type="password" id="editPassword" name="password" placeholder="Deixe em branco para manter a atual">
+        </div>
+
+        <div style="font-weight: 700; font-size: 0.85rem; color: var(--text-main); margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 6px;">
+          Permissões de Acesso (Checkboxes)
+        </div>
+
+        <div style="display: grid; gap: 12px;">
+          
+          <!-- Dashboard Checkbox -->
+          <label style="display: flex; align-items: start; gap: 10px; cursor: pointer; user-select: none;">
+            <input type="checkbox" id="checkDashboard" name="can_view_dashboard" value="y" style="margin-top: 4px; width: 16px; height: 16px; accent-color: var(--orange);">
+            <div style="display: flex; flex-direction: column;">
+              <span style="font-weight: 700; font-size: 0.85rem; color: var(--text-main);">Acessar Dashboard</span>
+              <span style="font-size: 0.75rem; color: var(--text-muted);">Permite visualizar os painéis estatísticos e resumos globais.</span>
+            </div>
+          </label>
+
+          <!-- Locations Checkbox -->
+          <label style="display: flex; align-items: start; gap: 10px; cursor: pointer; user-select: none;">
+            <input type="checkbox" id="checkLocations" name="can_manage_locations" value="y" style="margin-top: 4px; width: 16px; height: 16px; accent-color: var(--orange);">
+            <div style="display: flex; flex-direction: column;">
+              <span style="font-weight: 700; font-size: 0.85rem; color: var(--text-main);">Gerenciar Localizações & Setores</span>
+              <span style="font-size: 0.75rem; color: var(--text-muted);">Permite ver, cadastrar e excluir Igrejas/Localidades e seus respectivos Setores.</span>
+            </div>
+          </label>
+
+          <!-- Equipments Checkbox -->
+          <label style="display: flex; align-items: start; gap: 10px; cursor: pointer; user-select: none;">
+            <input type="checkbox" id="checkEquipments" name="can_manage_equipments" value="y" style="margin-top: 4px; width: 16px; height: 16px; accent-color: var(--orange);">
+            <div style="display: flex; flex-direction: column;">
+              <span style="font-weight: 700; font-size: 0.85rem; color: var(--text-main);">Gerenciar Equipamentos</span>
+              <span style="font-size: 0.75rem; color: var(--text-muted);">Permite ver, cadastrar, editar status e notas fiscais de aparelhos e itens patrimoniais.</span>
+            </div>
+          </label>
+
+          <!-- Almoxarifado Checkbox -->
+          <label style="display: flex; align-items: start; gap: 10px; cursor: pointer; user-select: none;">
+            <input type="checkbox" id="checkAlmoxarifado" name="can_manage_almoxarifado" value="y" style="margin-top: 4px; width: 16px; height: 16px; accent-color: var(--orange);">
+            <div style="display: flex; flex-direction: column;">
+              <span style="font-weight: 700; font-size: 0.85rem; color: var(--text-main);">Gerenciar Almoxarifado</span>
+              <span style="font-size: 0.75rem; color: var(--text-muted);">Permite ver, cadastrar itens de consumo e realizar registros de entrada, saída e perdas.</span>
+            </div>
+          </label>
+
+          <!-- Users Checkbox -->
+          <label id="labelCheckUsers" style="display: flex; align-items: start; gap: 10px; cursor: pointer; user-select: none;">
+            <input type="checkbox" id="checkUsers" name="can_manage_users" value="y" style="margin-top: 4px; width: 16px; height: 16px; accent-color: var(--orange);">
+            <div style="display: flex; flex-direction: column;">
+              <span style="font-weight: 700; font-size: 0.85rem; color: var(--text-main);">Gerenciar Usuários</span>
+              <span style="font-size: 0.75rem; color: var(--text-muted);">Permite gerenciar permissões de segurança e cadastrar ou excluir acessos.</span>
+            </div>
+          </label>
+
+        </div>
+
+        <div id="selfEditWarning" style="display: none; font-size: 0.75rem; color: #dc2626; background: rgba(239, 68, 68, 0.08); padding: 8px 12px; border-left: 3px solid #dc2626; margin-top: 6px;">
+          <strong>Aviso de Auto-Bloqueio:</strong> Você está editando sua própria conta. Por segurança, a permissão de <strong>Gerenciar Usuários</strong> não pode ser desativada por você mesmo.
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn" type="button" onclick="closeEditPermissionsModal()">Cancelar</button>
+          <button class="btn btn-orange" type="submit">Salvar Permissões</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  // MODAL CADASTRO
+  function openCreateUserModal() {
+    const modal = document.getElementById('createUserModal');
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden', 'false');
+    document.getElementById('createUsername').focus();
+  }
+
+  function closeCreateUserModal() {
+    const modal = document.getElementById('createUserModal');
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden', 'true');
+  }
+
+  // MODAL EDIÇÃO PERMISSÕES
+  function openEditPermissionsModal(userId, username, canDashboard, canLocations, canEquipments, canAlmoxarifado, canUsers) {
+    const modal = document.getElementById('editPermissionsModal');
+    const form = document.getElementById('editPermissionsForm');
+    const targetName = document.getElementById('editTargetName');
+    const warning = document.getElementById('selfEditWarning');
+    const checkUsers = document.getElementById('checkUsers');
+
+    // Define Action Dinâmica
+    form.action = `/usuarios/editar/${userId}`;
+    targetName.textContent = username;
+
+    // Define Valores
+    document.getElementById('editPassword').value = '';
+    document.getElementById('checkDashboard').checked = !!canDashboard;
+    document.getElementById('checkLocations').checked = !!canLocations;
+    document.getElementById('checkEquipments').checked = !!canEquipments;
+    document.getElementById('checkAlmoxarifado').checked = !!canAlmoxarifado;
+    checkUsers.checked = !!canUsers;
+
+    // Trava de segurança no frontend para o usuário logado
+    const loggedUser = "{{ session.get('user_name') }}";
+    if (username === loggedUser) {
+      warning.style.display = 'block';
+      checkUsers.disabled = true;
+      // Adiciona um campo oculto para que o formulário continue enviando o valor True
+      let hiddenInput = document.getElementById('hiddenCheckUsers');
+      if (!hiddenInput) {
+        hiddenInput = document.createElement('input');
+        hiddenInput.type = 'hidden';
+        hiddenInput.id = 'hiddenCheckUsers';
+        hiddenInput.name = 'can_manage_users';
+        hiddenInput.value = 'y';
+        form.appendChild(hiddenInput);
+      }
+    } else {
+      warning.style.display = 'none';
+      checkUsers.disabled = false;
+      const hiddenInput = document.getElementById('hiddenCheckUsers');
+      if (hiddenInput) {
+        hiddenInput.remove();
+      }
+    }
+
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeEditPermissionsModal() {
+    const modal = document.getElementById('editPermissionsModal');
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden', 'true');
+  }
+
+  // Fechamento de Modais ao clicar no backdrop
+  document.addEventListener("click", (e) => {
+    const createModal = document.getElementById("createUserModal");
+    const editModal = document.getElementById("editPermissionsModal");
+
+    if (e.target === createModal) closeCreateUserModal();
+    if (e.target === editModal) closeEditPermissionsModal();
+  });
+
+  // Fechamento de Modais ao pressionar ESC
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      closeCreateUserModal();
+      closeEditPermissionsModal();
+    }
+  });
+</script>
+{% endblock %}

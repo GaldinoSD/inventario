@@ -1,13 +1,16 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
 from app import db
-from app.models import AlmoxItem, AlmoxMovement
+from app.models import AlmoxItem, AlmoxMovement, Shelf, ShelfLevel
 from app.auth import login_required
 
 bp = Blueprint("almoxarifado", __name__)
 
 VALID_ALMOX_TYPES = {"ENTRADA", "SAIDA", "PERDA", "DANIFICADO"}
+
+
+# ===================== PAGE =====================
 
 @bp.get("/almoxarifado", endpoint="almoxarifado")
 @login_required
@@ -31,13 +34,39 @@ def almoxarifado():
         .all()
     )
 
-    return render_template("almoxarifado.html", items=items, movements=movements)
+    shelves = Shelf.query.order_by(func.lower(Shelf.name).asc()).all()
+
+    return render_template(
+        "almoxarifado.html",
+        items=items,
+        movements=movements,
+        shelves=shelves,
+    )
+
+
+# ===================== API: SHELF LEVELS =====================
+
+@bp.get("/almoxarifado/api/shelf/<int:shelf_id>/levels", endpoint="almoxarifado_shelf_levels_api")
+@login_required
+def shelf_levels_api(shelf_id):
+    """Return shelf levels as JSON for cascading selects."""
+    shelf = Shelf.query.get(shelf_id)
+    if not shelf:
+        return jsonify([])
+    levels = ShelfLevel.query.filter_by(shelf_id=shelf_id).order_by(ShelfLevel.label).all()
+    return jsonify([{"id": lv.id, "label": lv.label} for lv in levels])
+
+
+# ===================== ITEMS =====================
 
 @bp.post("/almoxarifado/add", endpoint="almoxarifado_add_item")
 @login_required
 def almoxarifado_add_item():
     name = (request.form.get("name") or "").strip()
     qty_raw = (request.form.get("qty") or "").strip()
+    location = (request.form.get("location") or "").strip() or None
+    shelf_id_raw = (request.form.get("shelf_id") or "").strip()
+    shelf_level_id_raw = (request.form.get("shelf_level_id") or "").strip()
 
     if not name:
         flash("Informe o nome do item.", "error")
@@ -53,11 +82,17 @@ def almoxarifado_add_item():
         flash("Quantidade deve ser maior que zero.", "error")
         return redirect(url_for("almoxarifado.almoxarifado"))
 
+    shelf_id = int(shelf_id_raw) if shelf_id_raw else None
+    shelf_level_id = int(shelf_level_id_raw) if shelf_level_id_raw else None
+
     existing = AlmoxItem.query.filter(func.lower(AlmoxItem.name) == name.lower()).first()
 
     try:
         if existing:
             existing.qty = int(existing.qty or 0) + qty
+            if shelf_id:
+                existing.shelf_id = shelf_id
+                existing.shelf_level_id = shelf_level_id
             db.session.add(existing)
             db.session.add(
                 AlmoxMovement(
@@ -72,7 +107,13 @@ def almoxarifado_add_item():
             flash(f"Entrada registrada: +{qty} em '{existing.name}'.", "success")
             return redirect(url_for("almoxarifado.almoxarifado"))
 
-        item = AlmoxItem(name=name, qty=qty)
+        item = AlmoxItem(
+            name=name,
+            qty=qty,
+            location=location,
+            shelf_id=shelf_id,
+            shelf_level_id=shelf_level_id,
+        )
         db.session.add(item)
         db.session.flush()
 
@@ -173,6 +214,9 @@ def almoxarifado_movimento():
 def almoxarifado_item_update():
     item_id_raw = (request.form.get("item_id") or "").strip()
     name = (request.form.get("name") or "").strip()
+    location = (request.form.get("location") or "").strip() or None
+    shelf_id_raw = (request.form.get("shelf_id") or "").strip()
+    shelf_level_id_raw = (request.form.get("shelf_level_id") or "").strip()
     add_qty_raw = (request.form.get("add_qty") or "0").strip()
     sub_qty_raw = (request.form.get("sub_qty") or "0").strip()
     motivo = (request.form.get("motivo") or "").strip() or None
@@ -205,6 +249,9 @@ def almoxarifado_item_update():
 
     try:
         item.name = name
+        item.location = location
+        item.shelf_id = int(shelf_id_raw) if shelf_id_raw else None
+        item.shelf_level_id = int(shelf_level_id_raw) if shelf_level_id_raw else None
 
         current = int(item.qty or 0)
         new_qty = current + add_qty - sub_qty
@@ -275,3 +322,182 @@ def almoxarifado_item_delete():
         db.session.rollback()
         flash("Erro ao excluir item.", "error")
         return redirect(url_for("almoxarifado.almoxarifado"))
+
+
+# ===================== SHELVES =====================
+
+@bp.post("/almoxarifado/shelf/add", endpoint="almoxarifado_shelf_add")
+@login_required
+def almoxarifado_shelf_add():
+    name = (request.form.get("name") or "").strip()
+    level_count_raw = (request.form.get("level_count") or "1").strip()
+
+    if not name:
+        flash("Informe o nome da estante.", "error")
+        return redirect(url_for("almoxarifado.almoxarifado"))
+
+    try:
+        level_count = int(level_count_raw)
+    except ValueError:
+        level_count = 1
+
+    if level_count < 1:
+        level_count = 1
+    if level_count > 26:
+        level_count = 26
+
+    try:
+        shelf = Shelf(name=name)
+        db.session.add(shelf)
+        db.session.flush()
+
+        for i in range(level_count):
+            label = chr(65 + i)  # A, B, C, ...
+            db.session.add(ShelfLevel(label=label, shelf_id=shelf.id))
+
+        db.session.commit()
+        flash(f"Estante '{name}' criada com {level_count} prateleira(s).", "success")
+    except IntegrityError:
+        db.session.rollback()
+        flash("Já existe uma estante com esse nome.", "error")
+    except Exception:
+        db.session.rollback()
+        flash("Erro ao criar estante.", "error")
+
+    return redirect(url_for("almoxarifado.almoxarifado"))
+
+
+@bp.post("/almoxarifado/shelf/delete", endpoint="almoxarifado_shelf_delete")
+@login_required
+def almoxarifado_shelf_delete():
+    shelf_id_raw = (request.form.get("shelf_id") or "").strip()
+
+    try:
+        shelf_id = int(shelf_id_raw)
+    except ValueError:
+        flash("Estante inválida.", "error")
+        return redirect(url_for("almoxarifado.almoxarifado"))
+
+    shelf = Shelf.query.get(shelf_id)
+    if not shelf:
+        flash("Estante não encontrada.", "error")
+        return redirect(url_for("almoxarifado.almoxarifado"))
+
+    try:
+        # Unlink items before deleting
+        AlmoxItem.query.filter_by(shelf_id=shelf_id).update(
+            {"shelf_id": None, "shelf_level_id": None}
+        )
+        db.session.delete(shelf)
+        db.session.commit()
+        flash(f"Estante '{shelf.name}' excluída. Itens desvinculados.", "success")
+    except Exception:
+        db.session.rollback()
+        flash("Erro ao excluir estante.", "error")
+
+    return redirect(url_for("almoxarifado.almoxarifado"))
+
+
+@bp.post("/almoxarifado/shelf/rename", endpoint="almoxarifado_shelf_rename")
+@login_required
+def almoxarifado_shelf_rename():
+    shelf_id_raw = (request.form.get("shelf_id") or "").strip()
+    new_name = (request.form.get("name") or "").strip()
+
+    if not new_name:
+        flash("Nome não pode ficar vazio.", "error")
+        return redirect(url_for("almoxarifado.almoxarifado"))
+
+    try:
+        shelf_id = int(shelf_id_raw)
+    except ValueError:
+        flash("Estante inválida.", "error")
+        return redirect(url_for("almoxarifado.almoxarifado"))
+
+    shelf = Shelf.query.get(shelf_id)
+    if not shelf:
+        flash("Estante não encontrada.", "error")
+        return redirect(url_for("almoxarifado.almoxarifado"))
+
+    try:
+        shelf.name = new_name
+        db.session.commit()
+        flash(f"Estante renomeada para '{new_name}'.", "success")
+    except IntegrityError:
+        db.session.rollback()
+        flash("Já existe uma estante com esse nome.", "error")
+    except Exception:
+        db.session.rollback()
+        flash("Erro ao renomear estante.", "error")
+
+    return redirect(url_for("almoxarifado.almoxarifado"))
+
+
+@bp.post("/almoxarifado/shelf/add-level", endpoint="almoxarifado_shelf_add_level")
+@login_required
+def almoxarifado_shelf_add_level():
+    shelf_id_raw = (request.form.get("shelf_id") or "").strip()
+
+    try:
+        shelf_id = int(shelf_id_raw)
+    except ValueError:
+        flash("Estante inválida.", "error")
+        return redirect(url_for("almoxarifado.almoxarifado"))
+
+    shelf = Shelf.query.get(shelf_id)
+    if not shelf:
+        flash("Estante não encontrada.", "error")
+        return redirect(url_for("almoxarifado.almoxarifado"))
+
+    existing_labels = {lv.label for lv in shelf.levels}
+    next_label = None
+    for i in range(26):
+        candidate = chr(65 + i)
+        if candidate not in existing_labels:
+            next_label = candidate
+            break
+
+    if not next_label:
+        flash("Limite de 26 prateleiras (A-Z) atingido.", "error")
+        return redirect(url_for("almoxarifado.almoxarifado"))
+
+    try:
+        db.session.add(ShelfLevel(label=next_label, shelf_id=shelf.id))
+        db.session.commit()
+        flash(f"Prateleira '{next_label}' adicionada à estante '{shelf.name}'.", "success")
+    except Exception:
+        db.session.rollback()
+        flash("Erro ao adicionar prateleira.", "error")
+
+    return redirect(url_for("almoxarifado.almoxarifado"))
+
+
+@bp.post("/almoxarifado/shelf/remove-level", endpoint="almoxarifado_shelf_remove_level")
+@login_required
+def almoxarifado_shelf_remove_level():
+    level_id_raw = (request.form.get("level_id") or "").strip()
+
+    try:
+        level_id = int(level_id_raw)
+    except ValueError:
+        flash("Prateleira inválida.", "error")
+        return redirect(url_for("almoxarifado.almoxarifado"))
+
+    level = ShelfLevel.query.get(level_id)
+    if not level:
+        flash("Prateleira não encontrada.", "error")
+        return redirect(url_for("almoxarifado.almoxarifado"))
+
+    try:
+        # Unlink items from this level
+        AlmoxItem.query.filter_by(shelf_level_id=level_id).update(
+            {"shelf_level_id": None}
+        )
+        db.session.delete(level)
+        db.session.commit()
+        flash(f"Prateleira '{level.label}' removida.", "success")
+    except Exception:
+        db.session.rollback()
+        flash("Erro ao remover prateleira.", "error")
+
+    return redirect(url_for("almoxarifado.almoxarifado"))
