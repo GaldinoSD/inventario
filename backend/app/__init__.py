@@ -26,6 +26,7 @@ def create_app():
     app.config["SECRET_KEY"] = "dev-secret-change-me"
     app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{Path(app.instance_path) / 'app.db'}"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["SESSION_PERMANENT"] = False
 
     db.init_app(app)
     migrate.init_app(app, db)

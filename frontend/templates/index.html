@@ -9,282 +9,431 @@
     <p class="page-desc">Visão geral do inventário — patrimônio, equipamentos, almoxarifado e distribuição.</p>
   </div>
 </div>
-
-<!-- ===================== KPI ROW 1 — MAIN COUNTERS ===================== -->
-<div class="dash-kpi-grid">
-
-  <!-- TOTAL EQUIPAMENTOS -->
-  <div class="card kpi-card kpi-hero">
-    <div class="kpi-icon-wrap kpi-icon-orange">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-    </div>
-    <div class="kpi-value">{{ counts.equipments }}</div>
-    <div class="kpi-label">Equipamentos</div>
-    <div class="kpi-sub">Total no inventário</div>
-  </div>
-
-  <!-- VALOR PATRIMÔNIO -->
-  <div class="card kpi-card kpi-hero">
-    <div class="kpi-icon-wrap kpi-icon-green">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-    </div>
-    <div class="kpi-value kpi-value-sm">R$ {{ "%.2f"|format(counts.total_value)|replace(".", ",") }}</div>
-    <div class="kpi-label">Valor Patrimonial</div>
-    <div class="kpi-sub">Soma de todos os equipamentos</div>
-  </div>
-
-  <!-- LOCALIZAÇÕES -->
-  <div class="card kpi-card">
-    <div class="kpi-icon-wrap kpi-icon-blue">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-    </div>
-    <div class="kpi-value">{{ counts.locations }}</div>
-    <div class="kpi-label">Localizações</div>
-  </div>
-
-  <!-- SETORES -->
-  <div class="card kpi-card">
-    <div class="kpi-icon-wrap kpi-icon-rose">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-    </div>
-    <div class="kpi-value">{{ counts.sectors }}</div>
-    <div class="kpi-label">Setores</div>
-  </div>
-
+<!-- ===================== TABS SWITCH DOCK ===================== -->
+<div class="tab-switch-dock" style="margin-top: 12px;">
+  <button class="tab-switch-btn active" onclick="switchDashboardTab('general')">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+    Painel Geral
+  </button>
+  <button class="tab-switch-btn" onclick="switchDashboardTab('sector')">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+    Painel por Setor
+  </button>
 </div>
 
-<!-- ===================== STATUS CARDS ROW ===================== -->
-<div class="dash-status-grid">
+<!-- ===================== PANEL GENERAL ===================== -->
+<div id="tab-panel-general" class="tab-panel active">
+  <!-- ===================== KPI ROW 1 — MAIN COUNTERS ===================== -->
+  <div class="dash-kpi-grid">
 
-  <div class="card status-card status-ativo">
-    <div class="status-dot dot-green"></div>
-    <div class="status-info">
-      <div class="status-value">{{ counts.ativos }}</div>
-      <div class="status-label">Ativos</div>
-    </div>
-    <div class="status-pct">
-      {% if counts.equipments > 0 %}
-        {{ "%.0f"|format((counts.ativos / counts.equipments) * 100) }}%
-      {% else %}
-        0%
-      {% endif %}
-    </div>
-  </div>
-
-  <div class="card status-card status-manut">
-    <div class="status-dot dot-yellow"></div>
-    <div class="status-info">
-      <div class="status-value">{{ counts.manutencao }}</div>
-      <div class="status-label">Manutenção</div>
-    </div>
-    <div class="status-pct">
-      {% if counts.equipments > 0 %}
-        {{ "%.0f"|format((counts.manutencao / counts.equipments) * 100) }}%
-      {% else %}
-        0%
-      {% endif %}
-    </div>
-  </div>
-
-  <div class="card status-card status-baixado">
-    <div class="status-dot dot-red"></div>
-    <div class="status-info">
-      <div class="status-value">{{ counts.baixados }}</div>
-      <div class="status-label">Baixados</div>
-    </div>
-    <div class="status-pct">
-      {% if counts.equipments > 0 %}
-        {{ "%.0f"|format((counts.baixados / counts.equipments) * 100) }}%
-      {% else %}
-        0%
-      {% endif %}
-    </div>
-  </div>
-
-  <!-- ALMOX MINI -->
-  <div class="card status-card status-almox">
-    <div class="status-dot dot-orange"></div>
-    <div class="status-info">
-      <div class="status-value">{{ counts.almox_items }}</div>
-      <div class="status-label">Itens Almoxarifado</div>
-    </div>
-    <div class="status-pct">{{ counts.almox_total_qty }} un.</div>
-  </div>
-
-</div>
-
-<!-- ===================== MAIN GRID: CHARTS + RECENT ===================== -->
-<div class="dash-main-grid">
-
-  <!-- LEFT: SECTORS + LOCATIONS (CHARTS) -->
-  <div class="dash-charts-col">
-
-    <!-- SETORES -->
-    <section class="card dash-chart-card">
-      <div class="dash-card-header">
-        <div>
-          <h2 class="dash-card-title">Equipamentos por Setor</h2>
-          <p class="dash-card-desc">Distribuição de volume</p>
-        </div>
-        <span class="badge">{{ by_sector|length }} setores</span>
+    <!-- TOTAL EQUIPAMENTOS -->
+    <div class="card kpi-card kpi-hero">
+      <div class="kpi-icon-wrap kpi-icon-orange">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
       </div>
-      <div class="progress-list">
-        {% set max_sec = namespace(val=1) %}
-        {% for row in by_sector %}
-          {% if loop.first and row.count > 0 %}{% set max_sec.val = row.count %}{% endif %}
-          <div class="progress-item">
-            <div class="progress-header">
-              <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ row.name }}</span>
-              <span class="progress-count">{{ row.count }}</span>
-            </div>
-            <div class="progress-track">
-              <div class="progress-bar" style="width: {{ (row.count / max_sec.val) * 100 }}%"></div>
-            </div>
-          </div>
-        {% else %}
-          <div class="muted small" style="margin-top:10px;">Nenhum setor cadastrado.</div>
-        {% endfor %}
+      <div class="kpi-value">{{ counts.equipments }}</div>
+      <div class="kpi-label">Equipamentos</div>
+      <div class="kpi-sub">Total no inventário</div>
+    </div>
+
+    <!-- VALOR PATRIMÔNIO -->
+    <div class="card kpi-card kpi-hero">
+      <div class="kpi-icon-wrap kpi-icon-green">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
       </div>
-    </section>
+      <div class="kpi-value kpi-value-sm">R$ {{ "{:,.2f}".format(counts.total_value)|replace(",", "X")|replace(".", ",")|replace("X", ".") }}</div>
+      <div class="kpi-label">Valor Patrimonial</div>
+      <div class="kpi-sub">Soma de todos os equipamentos</div>
+    </div>
 
     <!-- LOCALIZAÇÕES -->
-    <section class="card dash-chart-card">
-      <div class="dash-card-header">
-        <div>
-          <h2 class="dash-card-title">Equipamentos por Localização</h2>
-          <p class="dash-card-desc">Distribuição de volume</p>
-        </div>
-        <span class="badge">{{ by_location|length }} locais</span>
+    <div class="card kpi-card">
+      <div class="kpi-icon-wrap kpi-icon-blue">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
       </div>
-      <div class="progress-list">
-        {% set max_loc = namespace(val=1) %}
-        {% for row in by_location %}
-          {% if loop.first and row.count > 0 %}{% set max_loc.val = row.count %}{% endif %}
-          <div class="progress-item">
-            <div class="progress-header">
-              <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ row.name }}</span>
-              <span class="progress-count">{{ row.count }}</span>
-            </div>
-            <div class="progress-track">
-              <div class="progress-bar" style="width: {{ (row.count / max_loc.val) * 100 }}%"></div>
-            </div>
-          </div>
-        {% else %}
-          <div class="muted small" style="margin-top:10px;">Nenhuma localização cadastrada.</div>
-        {% endfor %}
+      <div class="kpi-value">{{ counts.locations }}</div>
+      <div class="kpi-label">Localizações</div>
+    </div>
+
+    <!-- SETORES -->
+    <div class="card kpi-card">
+      <div class="kpi-icon-wrap kpi-icon-rose">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
       </div>
-    </section>
+      <div class="kpi-value">{{ counts.sectors }}</div>
+      <div class="kpi-label">Setores</div>
+    </div>
+
   </div>
 
-  <!-- RIGHT: RECENT ACTIVITY -->
-  <div class="dash-activity-col">
+  <!-- ===================== STATUS CARDS ROW ===================== -->
+  <div class="dash-status-grid">
 
-    <!-- ÚLTIMOS EQUIPAMENTOS CADASTRADOS -->
-    <section class="card dash-chart-card">
-      <div class="dash-card-header">
-        <div>
-          <h2 class="dash-card-title">Equipamentos Recentes</h2>
-          <p class="dash-card-desc">Últimos cadastrados</p>
-        </div>
-        <a href="{{ url_for('equipments.equipments_list') }}" class="btn" style="font-size:0.8rem;padding:6px 12px;">
-          Ver todos
-        </a>
+    <div class="card status-card status-ativo">
+      <div class="status-dot dot-green"></div>
+      <div class="status-info">
+        <div class="status-value">{{ counts.ativos }}</div>
+        <div class="status-label">Ativos</div>
       </div>
-      <div class="recent-list">
-        {% for eq in recent_equipment %}
-          <div class="recent-item">
-            <div class="recent-item-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-            </div>
-            <div class="recent-item-info">
-              <div class="recent-item-name">{{ eq.name }}</div>
-              <div class="recent-item-meta">
-                <span>{{ eq.barcode_pat }}</span>
-                {% if eq.brand %}<span>• {{ eq.brand }}</span>{% endif %}
+      <div class="status-pct">
+        {% if counts.equipments > 0 %}
+          {{ "%.0f"|format((counts.ativos / counts.equipments) * 100) }}%
+        {% else %}
+          0%
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card status-card status-manut">
+      <div class="status-dot dot-yellow"></div>
+      <div class="status-info">
+        <div class="status-value">{{ counts.manutencao }}</div>
+        <div class="status-label">Manutenção</div>
+      </div>
+      <div class="status-pct">
+        {% if counts.equipments > 0 %}
+          {{ "%.0f"|format((counts.manutencao / counts.equipments) * 100) }}%
+        {% else %}
+          0%
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card status-card status-baixado">
+      <div class="status-dot dot-red"></div>
+      <div class="status-info">
+        <div class="status-value">{{ counts.baixados }}</div>
+        <div class="status-label">Baixados</div>
+      </div>
+      <div class="status-pct">
+        {% if counts.equipments > 0 %}
+          {{ "%.0f"|format((counts.baixados / counts.equipments) * 100) }}%
+        {% else %}
+          0%
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- ALMOX MINI -->
+    <div class="card status-card status-almox">
+      <div class="status-dot dot-orange"></div>
+      <div class="status-info">
+        <div class="status-value">{{ counts.almox_items }}</div>
+        <div class="status-label">Itens Almoxarifado</div>
+      </div>
+      <div class="status-pct">{{ counts.almox_total_qty }} un.</div>
+    </div>
+
+  </div>
+
+  <!-- ===================== MAIN GRID: CHARTS + RECENT ===================== -->
+  <div class="dash-main-grid">
+
+    <!-- LEFT: SECTORS + LOCATIONS (CHARTS) -->
+    <div class="dash-charts-col">
+
+      <!-- SETORES -->
+      <section class="card dash-chart-card">
+        <div class="dash-card-header">
+          <div>
+            <h2 class="dash-card-title">Equipamentos por Setor</h2>
+            <p class="dash-card-desc">Distribuição de volume</p>
+          </div>
+          <span class="badge">{{ by_sector|length }} setores</span>
+        </div>
+        <div class="progress-list">
+          {% set max_sec = namespace(val=1) %}
+          {% for row in by_sector %}
+            {% if loop.first and row.count > 0 %}{% set max_sec.val = row.count %}{% endif %}
+            <div class="progress-item">
+              <div class="progress-header">
+                <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ row.name }}</span>
+                <span class="progress-count">{{ row.count }}</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-bar" style="width: {{ (row.count / max_sec.val) * 100 }}%"></div>
               </div>
             </div>
-            <div class="recent-item-right">
-              <span class="badge {% if eq.status == 'Ativo' %}badge-success{% elif eq.status == 'Manutenção' %}badge-warning{% else %}badge-danger{% endif %}" style="font-size:0.65rem;">{{ eq.status }}</span>
-              <span class="muted small">{{ eq.created_at.strftime('%d/%m/%y') }}</span>
-            </div>
-          </div>
-        {% else %}
-          <div class="muted small" style="padding:16px 0;">Nenhum equipamento cadastrado.</div>
-        {% endfor %}
-      </div>
-    </section>
-
-    <!-- MOVIMENTAÇÕES ALMOXARIFADO -->
-    <section class="card dash-chart-card">
-      <div class="dash-card-header">
-        <div>
-          <h2 class="dash-card-title">Movimentações Recentes</h2>
-          <p class="dash-card-desc">Almoxarifado</p>
+          {% else %}
+            <div class="muted small" style="margin-top:10px;">Nenhum setor cadastrado.</div>
+          {% endfor %}
         </div>
-        <a href="{{ url_for('almoxarifado.almoxarifado') }}" class="btn" style="font-size:0.8rem;padding:6px 12px;">
-          Ver todos
-        </a>
-      </div>
-      <div class="recent-list">
-        {% for mv in recent_movements %}
-          <div class="recent-item">
-            <div class="recent-item-icon mv-icon-{{ mv.type|lower }}">
-              {% if mv.type == 'ENTRADA' %}
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="5 12 12 5 19 12"/></svg>
-              {% elif mv.type == 'SAIDA' %}
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
-              {% else %}
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-              {% endif %}
-            </div>
-            <div class="recent-item-info">
-              <div class="recent-item-name">{{ mv.item_name }}</div>
-              <div class="recent-item-meta">
-                <span class="mv-type-tag mv-tag-{{ mv.type|lower }}">{{ mv.type }}</span>
-                <span>{{ mv.qty }} un.</span>
-                {% if mv.motivo %}<span>• {{ mv.motivo[:30] }}{% if mv.motivo|length > 30 %}…{% endif %}</span>{% endif %}
+      </section>
+
+      <!-- LOCALIZAÇÕES -->
+      <section class="card dash-chart-card">
+        <div class="dash-card-header">
+          <div>
+            <h2 class="dash-card-title">Equipamentos por Localização</h2>
+            <p class="dash-card-desc">Distribuição de volume</p>
+          </div>
+          <span class="badge">{{ by_location|length }} locais</span>
+        </div>
+        <div class="progress-list">
+          {% set max_loc = namespace(val=1) %}
+          {% for row in by_location %}
+            {% if loop.first and row.count > 0 %}{% set max_loc.val = row.count %}{% endif %}
+            <div class="progress-item">
+              <div class="progress-header">
+                <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ row.name }}</span>
+                <span class="progress-count">{{ row.count }}</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-bar" style="width: {{ (row.count / max_loc.val) * 100 }}%"></div>
               </div>
             </div>
-            <div class="recent-item-right">
-              <span class="muted small">{{ mv.created_at.strftime('%d/%m/%y') }}</span>
-            </div>
-          </div>
-        {% else %}
-          <div class="muted small" style="padding:16px 0;">Nenhuma movimentação registrada.</div>
-        {% endfor %}
-      </div>
-    </section>
+          {% else %}
+            <div class="muted small" style="margin-top:10px;">Nenhuma localização cadastrada.</div>
+          {% endfor %}
+        </div>
+      </section>
+    </div>
 
-    <!-- ESTOQUE BAIXO -->
-    {% if almox_low_stock %}
-    <section class="card dash-chart-card dash-alert-card">
-      <div class="dash-card-header">
-        <div>
-          <h2 class="dash-card-title" style="color:#ef4444;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-            Estoque Baixo
-          </h2>
-          <p class="dash-card-desc">Itens com 5 ou menos unidades</p>
+    <!-- RIGHT: RECENT ACTIVITY -->
+    <div class="dash-activity-col">
+
+      <!-- ÚLTIMOS EQUIPAMENTOS CADASTRADOS -->
+      <section class="card dash-chart-card">
+        <div class="dash-card-header">
+          <div>
+            <h2 class="dash-card-title">Equipamentos Recentes</h2>
+            <p class="dash-card-desc">Últimos cadastrados</p>
+          </div>
+          <a href="{{ url_for('equipments.equipments_list') }}" class="btn" style="font-size:0.8rem;padding:6px 12px;">
+            Ver todos
+          </a>
+        </div>
+        <div class="recent-list">
+          {% for eq in recent_equipment %}
+            <div class="recent-item">
+              <div class="recent-item-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              </div>
+              <div class="recent-item-info">
+                <div class="recent-item-name">{{ eq.name }}</div>
+                <div class="recent-item-meta">
+                  <span>{{ eq.barcode_pat }}</span>
+                  {% if eq.brand %}<span>• {{ eq.brand }}</span>{% endif %}
+                </div>
+              </div>
+              <div class="recent-item-right">
+                <span class="badge {% if eq.status == 'Ativo' %}badge-success{% elif eq.status == 'Manutenção' %}badge-warning{% else %}badge-danger{% endif %}" style="font-size:0.65rem;">{{ eq.status }}</span>
+                <span class="muted small">{{ eq.created_at.strftime('%d/%m/%y') }}</span>
+              </div>
+            </div>
+          {% else %}
+            <div class="muted small" style="padding:16px 0;">Nenhum equipamento cadastrado.</div>
+          {% endfor %}
+        </div>
+      </section>
+
+      <!-- MOVIMENTAÇÕES ALMOXARIFADO -->
+      <section class="card dash-chart-card">
+        <div class="dash-card-header">
+          <div>
+            <h2 class="dash-card-title">Movimentações Recentes</h2>
+            <p class="dash-card-desc">Almoxarifado</p>
+          </div>
+          <a href="{{ url_for('almoxarifado.almoxarifado') }}" class="btn" style="font-size:0.8rem;padding:6px 12px;">
+            Ver todos
+          </a>
+        </div>
+        <div class="recent-list">
+          {% for mv in recent_movements %}
+            <div class="recent-item">
+              <div class="recent-item-icon mv-icon-{{ mv.type|lower }}">
+                {% if mv.type == 'ENTRADA' %}
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="5 12 12 5 19 12"/></svg>
+                {% elif mv.type == 'SAIDA' %}
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+                {% else %}
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                {% endif %}
+              </div>
+              <div class="recent-item-info">
+                <div class="recent-item-name">{{ mv.item_name }}</div>
+                <div class="recent-item-meta">
+                  <span class="mv-type-tag mv-tag-{{ mv.type|lower }}">{{ mv.type }}</span>
+                  <span>{{ mv.qty }} un.</span>
+                  {% if mv.motivo %}<span>• {{ mv.motivo[:30] }}{% if mv.motivo|length > 30 %}…{% endif %}</span>{% endif %}
+                </div>
+              </div>
+              <div class="recent-item-right">
+                <span class="muted small">{{ mv.created_at.strftime('%d/%m/%y') }}</span>
+              </div>
+            </div>
+          {% else %}
+            <div class="muted small" style="padding:16px 0;">Nenhuma movimentação registrada.</div>
+          {% endfor %}
+        </div>
+      </section>
+
+      <!-- ESTOQUE BAIXO -->
+      {% if almox_low_stock %}
+      <section class="card dash-chart-card dash-alert-card">
+        <div class="dash-card-header">
+          <div>
+            <h2 class="dash-card-title" style="color:#ef4444;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              Estoque Baixo
+            </h2>
+            <p class="dash-card-desc">Itens com 5 ou menos unidades</p>
+          </div>
+        </div>
+        <div class="recent-list">
+          {% for item in almox_low_stock %}
+            <div class="recent-item">
+              <div class="recent-item-icon" style="background:rgba(239,68,68,0.1);color:#ef4444;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+              </div>
+              <div class="recent-item-info">
+                <div class="recent-item-name">{{ item.name }}</div>
+              </div>
+              <div class="recent-item-right">
+                <span class="badge badge-danger" style="font-size:0.75rem;">{{ item.qty }} un.</span>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+    </div>
+  </div>
+</div> <!-- Close #tab-panel-general -->
+
+<!-- ===================== PANEL BY SECTOR ===================== -->
+<div id="tab-panel-sector" class="tab-panel" style="display: none;">
+  <!-- Sector Selection Dock -->
+  <div class="card" style="padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; flex-wrap: wrap;">
+    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; flex: 1; min-width: 240px;">
+      <label style="font-weight: 800; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); white-space: nowrap;">Selecione o Setor:</label>
+      <div style="position: relative; display: flex; align-items: center; flex: 1; max-width: 320px;">
+        <select class="input" id="sector-dashboard-select" onchange="loadSectorDashboardData()" style="width: 100%; height: 38px; font-size: 0.85rem; padding-left: 32px;">
+          {% for sec in by_sector %}
+            <option value="{{ sec.id }}">{{ sec.name }}</option>
+          {% endfor %}
+        </select>
+        <span style="position: absolute; left: 10px; color: var(--text-muted); display: flex; align-items: center; pointer-events: none;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+        </span>
+      </div>
+    </div>
+    
+    <div id="sector-dashboard-loading" style="display: none; align-items: center; gap: 8px; color: var(--orange); flex-shrink:0;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" class="spinner" style="animation: spin 1s linear infinite;"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>
+      <span style="font-size: 0.8rem; font-weight: 700;">Carregando dados...</span>
+    </div>
+  </div>
+
+  <!-- Sector Workspace Content -->
+  <div id="sector-dashboard-content" style="opacity: 1; transition: opacity 0.2s ease;">
+    <!-- Sector KPIs -->
+    <div class="dash-kpi-grid">
+      <!-- Total equipments in sector -->
+      <div class="card kpi-card">
+        <div class="kpi-icon-wrap kpi-icon-orange">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        </div>
+        <div class="kpi-value" id="sec-kpi-total">0</div>
+        <div class="kpi-label">Equipamentos</div>
+        <div class="kpi-sub">Vinculados ao setor</div>
+      </div>
+
+      <!-- Sector total value -->
+      <div class="card kpi-card">
+        <div class="kpi-icon-wrap kpi-icon-green">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+        <div class="kpi-value kpi-value-sm" id="sec-kpi-value">R$ 0,00</div>
+        <div class="kpi-label">Valor do Setor</div>
+        <div class="kpi-sub">Patrimônio acumulado</div>
+      </div>
+      
+      <!-- Ativos -->
+      <div class="card kpi-card" style="padding: 16px 20px !important; justify-content: center;">
+        <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div class="status-dot dot-green" style="animation:none;"></div>
+            <div style="font-weight:700; font-size:0.85rem; color:var(--text-main);">Ativos</div>
+          </div>
+          <div class="kpi-value" id="sec-kpi-ativos" style="font-size:1.8rem;">0</div>
         </div>
       </div>
-      <div class="recent-list">
-        {% for item in almox_low_stock %}
-          <div class="recent-item">
-            <div class="recent-item-icon" style="background:rgba(239,68,68,0.1);color:#ef4444;">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+
+      <!-- Em Manutencao -->
+      <div class="card kpi-card" style="padding: 16px 20px !important; justify-content: center;">
+        <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div class="status-dot dot-yellow" style="animation:none;"></div>
+            <div style="font-weight:700; font-size:0.85rem; color:var(--text-main);">Em Manutenção</div>
+          </div>
+          <div class="kpi-value" id="sec-kpi-manutencao" style="font-size:1.8rem;">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sector Layout Details: Chart + Table -->
+    <div class="dash-main-grid" style="margin-top:20px;">
+      <!-- Left: Recent equipments in this sector -->
+      <div class="dash-charts-col">
+        <section class="card dash-chart-card">
+          <div class="dash-card-header">
+            <div>
+              <h2 class="dash-card-title">Recém-Adicionados</h2>
+              <p class="dash-card-desc">Últimos itens vinculados</p>
             </div>
-            <div class="recent-item-info">
-              <div class="recent-item-name">{{ item.name }}</div>
-            </div>
-            <div class="recent-item-right">
-              <span class="badge badge-danger" style="font-size:0.75rem;">{{ item.qty }} un.</span>
+            <span class="badge" id="sec-recent-badge">0 itens</span>
+          </div>
+          <div class="recent-list" id="sec-recent-list">
+            <!-- Dynamically populated -->
+          </div>
+        </section>
+      </div>
+
+      <!-- Right: Detailed equipments table -->
+      <div class="dash-activity-col">
+        <section class="card dash-chart-card" style="padding: 0 !important; overflow: hidden;">
+          <div class="dash-card-header" style="padding: 24px 24px 12px;">
+            <div>
+              <h2 class="dash-card-title">Relação Completa</h2>
+              <p class="dash-card-desc">Equipamentos alocados neste setor</p>
             </div>
           </div>
-        {% endfor %}
+          
+          <div class="table-wrap">
+            <table class="table" style="min-width: 100%;">
+              <thead>
+                <tr>
+                  <th style="font-size:0.7rem; padding: 10px 14px;">Equipamento</th>
+                  <th style="font-size:0.7rem; padding: 10px 14px;">Local</th>
+                  <th style="font-size:0.7rem; padding: 10px 14px;">PAT/Código</th>
+                  <th style="font-size:0.7rem; padding: 10px 14px;">Valor</th>
+                  <th style="font-size:0.7rem; padding: 10px 14px; text-align:center;">Status</th>
+                </tr>
+              </thead>
+              <tbody id="sec-table-body">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
-    </section>
-    {% endif %}
+    </div>
+  </div>
 
+  <!-- Sector Error Container -->
+  <div id="sector-dashboard-error" style="display: none; transition: opacity 0.2s ease; margin-top: 20px;">
+    <div class="card" style="padding: 40px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 16px; max-width: 500px; margin: 0 auto;">
+      <div style="background: rgba(239, 68, 68, 0.1); color: #ef4444; width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      </div>
+      <div>
+        <h3 style="margin: 0; font-size: 1.1rem; color: var(--text-main);">Falha ao carregar os dados</h3>
+        <p style="margin: 4px 0 0; font-size: 0.85rem; color: var(--text-muted);">Não foi possível estabelecer conexão com o servidor.</p>
+      </div>
+      <button class="btn" onclick="loadSectorDashboardData()" style="padding: 8px 20px; font-size: 0.85rem; height: auto; background: var(--orange); color: white; border: none; cursor: pointer; border-radius: 6px;">Tentar Novamente</button>
+    </div>
   </div>
 </div>
 
@@ -299,271 +448,271 @@
     gap: 16px;
     margin-bottom: 16px;
   }
-  .kpi-hero {
-    grid-column: span 1;
-  }
-
+  .kpi-hero { grid-column: span 1; }
   .kpi-card {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-    padding: 22px 24px !important;
-    position: relative;
-    overflow: hidden;
+    display: flex; flex-direction: column; align-items: flex-start;
+    gap: 4px; padding: 22px 24px !important; position: relative; overflow: hidden;
   }
 
   .kpi-icon-wrap {
-    width: 42px; height: 42px;
-    border-radius: 12px;
+    width: 42px; height: 42px; border-radius: 12px;
     display: flex; align-items: center; justify-content: center;
-    margin-bottom: 8px;
-    flex-shrink: 0;
+    margin-bottom: 8px; flex-shrink: 0;
   }
-  .kpi-icon-wrap svg {
-    width: 22px; height: 22px;
-  }
-  .kpi-icon-orange {
-    background: rgba(255, 106, 0, 0.12);
-    color: var(--orange);
-  }
-  .kpi-icon-green {
-    background: rgba(34, 197, 94, 0.12);
-    color: #22c55e;
-  }
-  .kpi-icon-blue {
-    background: rgba(59, 130, 246, 0.12);
-    color: #3b82f6;
-  }
-  .kpi-icon-rose {
-    background: rgba(236, 72, 153, 0.12);
-    color: #ec4899;
-  }
+  .kpi-icon-wrap svg { width: 22px; height: 22px; }
+  .kpi-icon-orange { background: rgba(255, 106, 0, 0.12); color: var(--orange); }
+  .kpi-icon-green { background: rgba(34, 197, 94, 0.12); color: #22c55e; }
+  .kpi-icon-blue { background: rgba(59, 130, 246, 0.12); color: #3b82f6; }
+  .kpi-icon-rose { background: rgba(236, 72, 153, 0.12); color: #ec4899; }
 
-  .kpi-value {
-    font-size: 2.4rem;
-    font-weight: 900;
-    line-height: 1;
-    color: var(--text-main);
-    letter-spacing: -0.03em;
-  }
-  .kpi-value-sm {
-    font-size: 1.6rem;
-  }
-  .kpi-label {
-    font-size: 0.9rem;
-    font-weight: 700;
-    color: var(--text-main);
-    margin-top: 4px;
-  }
-  .kpi-sub {
-    font-size: 0.78rem;
-    color: var(--text-muted);
-    font-weight: 500;
-  }
+  .kpi-value { font-size: 2.4rem; font-weight: 900; line-height: 1; color: var(--text-main); letter-spacing: -0.03em; }
+  .kpi-value-sm { font-size: 1.6rem; }
+  .kpi-label { font-size: 0.9rem; font-weight: 700; color: var(--text-main); margin-top: 4px; }
+  .kpi-sub { font-size: 0.78rem; color: var(--text-muted); font-weight: 500; }
 
   /* ===== STATUS CARDS ===== */
-  .dash-status-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 16px;
-    margin-bottom: 20px;
-  }
-
-  .status-card {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 16px 20px !important;
-    border-radius: 14px !important;
-  }
-  .status-dot {
-    width: 10px; height: 10px;
-    border-radius: 50%;
-    flex-shrink: 0;
-    animation: pulse-dot 2.5s ease-in-out infinite;
-  }
+  .dash-status-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 20px; }
+  .status-card { display: flex; align-items: center; gap: 14px; padding: 16px 20px !important; border-radius: 14px !important; }
+  .status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; animation: pulse-dot 2.5s ease-in-out infinite; }
   .dot-green { background: #22c55e; box-shadow: 0 0 8px rgba(34,197,94,0.4); }
   .dot-yellow { background: #eab308; box-shadow: 0 0 8px rgba(234,179,8,0.4); }
   .dot-red { background: #ef4444; box-shadow: 0 0 8px rgba(239,68,68,0.4); }
   .dot-orange { background: var(--orange); box-shadow: 0 0 8px rgba(255,106,0,0.4); }
 
-  @keyframes pulse-dot {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.6; transform: scale(1.2); }
-  }
+  @keyframes pulse-dot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.2); } }
 
-  .status-info {
-    flex: 1;
-    min-width: 0;
-  }
-  .status-value {
-    font-size: 1.5rem;
-    font-weight: 900;
-    line-height: 1;
-    color: var(--text-main);
-  }
-  .status-label {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-    font-weight: 600;
-    margin-top: 2px;
-  }
-  .status-pct {
-    font-size: 0.85rem;
-    font-weight: 800;
-    color: var(--text-muted);
-    white-space: nowrap;
-  }
+  .status-info { flex: 1; min-width: 0; }
+  .status-value { font-size: 1.5rem; font-weight: 900; line-height: 1; color: var(--text-main); }
+  .status-label { font-size: 0.8rem; color: var(--text-muted); font-weight: 600; margin-top: 2px; }
+  .status-pct { font-size: 0.85rem; font-weight: 800; color: var(--text-muted); white-space: nowrap; }
 
   /* ===== MAIN 2-COL GRID ===== */
-  .dash-main-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    align-items: start;
-  }
-  .dash-charts-col,
-  .dash-activity-col {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-  }
+  .dash-main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+  .dash-charts-col, .dash-activity-col { display: flex; flex-direction: column; gap: 20px; }
+  .dash-chart-card { padding: 24px !important; }
 
-  .dash-chart-card {
-    padding: 24px !important;
-  }
+  .dash-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+  .dash-card-title { margin: 0; font-size: 1.1rem; font-weight: 800; display: flex; align-items: center; }
+  .dash-card-desc { margin: 4px 0 0; font-size: 0.78rem; color: var(--text-muted); font-weight: 500; }
 
-  .dash-card-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 20px;
-  }
-  .dash-card-title {
-    margin: 0;
-    font-size: 1.1rem;
-    font-weight: 800;
-    display: flex;
-    align-items: center;
-  }
-  .dash-card-desc {
-    margin: 4px 0 0;
-    color: var(--text-muted);
-    font-size: 0.82rem;
-    font-weight: 500;
-  }
+  /* ===== PROGRESS LISTS (CHARTS) ===== */
+  .progress-list { display: flex; flex-direction: column; gap: 14px; }
+  .progress-item { display: flex; flex-direction: column; gap: 6px; }
+  .progress-header { display: flex; align-items: center; justify-content: space-between; font-size: 0.82rem; font-weight: 700; color: var(--text-main); }
+  .progress-count { color: var(--text-muted); }
+  .progress-track { height: 6px; background: var(--bg-main); border-radius: 999px; overflow: hidden; }
 
-  /* ===== RECENT ITEMS LIST ===== */
-  .recent-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-  }
-  .recent-item {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 12px 0;
-    border-bottom: 1px solid var(--border);
-    transition: background 0.15s ease;
-  }
-  .recent-item:last-child {
-    border-bottom: none;
-  }
-  .recent-item:hover {
-    background: var(--bg-surface-hover);
-    margin: 0 -12px;
-    padding-left: 12px;
-    padding-right: 12px;
-    border-radius: var(--radius-sm);
-  }
-
+  /* ===== RECENT LIST ===== */
+  .recent-list { display: flex; flex-direction: column; gap: 12px; }
+  .recent-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--bg-main); border-radius: 10px; border: 1px solid var(--border); }
   .recent-item-icon {
-    width: 36px; height: 36px;
-    border-radius: 10px;
-    background: rgba(255, 106, 0, 0.1);
-    color: var(--orange);
+    width: 32px; height: 32px; border-radius: 8px;
     display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
+    background: var(--bg-surface); color: var(--text-muted);
+    border: 1px solid var(--border); flex-shrink: 0;
   }
-  .recent-item-icon svg {
-    width: 18px; height: 18px;
-  }
+  .recent-item-icon svg { width: 16px; height: 16px; }
+  .recent-item-icon.mv-icon-entrada { background: rgba(34,197,94,0.12); color:#22c55e; border-color:transparent; }
+  .recent-item-icon.mv-icon-saida { background: rgba(59,130,246,0.12); color:#3b82f6; border-color:transparent; }
+  .recent-item-icon.mv-icon-perda, .recent-item-icon.mv-icon-danificado { background: rgba(239,68,68,0.12); color:#ef4444; border-color:transparent; }
 
-  /* Movement type icon colors */
-  .mv-icon-entrada { background: rgba(34,197,94,0.1); color: #22c55e; }
-  .mv-icon-saida { background: rgba(59,130,246,0.1); color: #3b82f6; }
-  .mv-icon-perda, .mv-icon-danificado { background: rgba(239,68,68,0.1); color: #ef4444; }
-
-  .recent-item-info {
-    flex: 1;
-    min-width: 0;
-  }
-  .recent-item-name {
-    font-weight: 700;
-    font-size: 0.9rem;
-    color: var(--text-main);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .recent-item-meta {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.78rem;
-    color: var(--text-muted);
-    font-weight: 500;
-    margin-top: 2px;
-    flex-wrap: wrap;
-  }
-
-  .recent-item-right {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 4px;
-    flex-shrink: 0;
-  }
+  .recent-item-info { flex: 1; min-width: 0; }
+  .recent-item-name { font-weight: 700; font-size: 0.9rem; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .recent-item-meta { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--text-muted); font-weight: 500; margin-top: 2px; flex-wrap: wrap; }
+  .recent-item-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
 
   /* Movement type tags */
-  .mv-type-tag {
-    font-size: 0.65rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    padding: 2px 6px;
-    border-radius: 4px;
-  }
+  .mv-type-tag { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; padding: 2px 6px; border-radius: 4px; }
   .mv-tag-entrada { background: rgba(34,197,94,0.12); color: #16a34a; }
   .mv-tag-saida { background: rgba(59,130,246,0.12); color: #3b82f6; }
-  .mv-tag-perda { background: rgba(239,68,68,0.12); color: #dc2626; }
-  .mv-tag-danificado { background: rgba(239,68,68,0.12); color: #dc2626; }
+  .mv-tag-perda, .mv-tag-danificado { background: rgba(239,68,68,0.12); color: #dc2626; }
 
-  html[data-theme="dark"] .mv-tag-entrada { color: #4ade80; }
-  html[data-theme="dark"] .mv-tag-saida { color: #60a5fa; }
-  html[data-theme="dark"] .mv-tag-perda, html[data-theme="dark"] .mv-tag-danificado { color: #f87171; }
-
-  /* Alert card subtle border */
-  .dash-alert-card {
-    border-color: rgba(239, 68, 68, 0.25) !important;
-  }
-  html[data-theme="dark"] .dash-alert-card {
-    background: linear-gradient(145deg, rgba(24, 24, 31, 0.9) 0%, rgba(40, 18, 18, 0.95) 100%) !important;
-  }
+  .dash-alert-card { border-color: rgba(239, 68, 68, 0.25) !important; }
 
   /* ===== RESPONSIVE ===== */
   @media (max-width: 1100px) {
-    .dash-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .dash-status-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .dash-kpi-grid, .dash-status-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .dash-main-grid { grid-template-columns: 1fr; }
   }
   @media (max-width: 560px) {
-    .dash-kpi-grid { grid-template-columns: 1fr; }
-    .dash-status-grid { grid-template-columns: 1fr; }
+    .dash-kpi-grid, .dash-status-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .kpi-value { font-size: 1.6rem !important; }
+    .kpi-value-sm { font-size: 1.25rem !important; }
+    .status-value { font-size: 1.2rem !important; }
+    .kpi-card, .status-card { padding: 12px 14px !important; }
+    .kpi-icon-wrap { width: 32px; height: 32px; margin-bottom: 4px; border-radius: 8px; }
+    .kpi-icon-wrap svg { width: 16px; height: 16px; }
+    .kpi-label { font-size: 0.78rem !important; }
+    .kpi-sub { font-size: 0.68rem !important; }
   }
 </style>
+
+<script>
+function switchDashboardTab(tab) {
+  const btnGeneral = document.querySelector(".tab-switch-btn[onclick*='general']");
+  const btnSector = document.querySelector(".tab-switch-btn[onclick*='sector']");
+  const panelGeneral = document.getElementById("tab-panel-general");
+  const panelSector = document.getElementById("tab-panel-sector");
+
+  if (tab === 'general') {
+    btnGeneral.classList.add("active");
+    btnSector.classList.remove("active");
+    panelGeneral.style.display = "block";
+    panelGeneral.classList.add("active");
+    panelSector.style.display = "none";
+    panelSector.classList.remove("active");
+  } else {
+    btnGeneral.classList.remove("active");
+    btnSector.classList.add("active");
+    panelGeneral.style.display = "none";
+    panelGeneral.classList.remove("active");
+    panelSector.style.display = "block";
+    panelSector.classList.add("active");
+    
+    // Auto load data
+    loadSectorDashboardData();
+  }
+}
+
+async function loadSectorDashboardData() {
+  const select = document.getElementById("sector-dashboard-select");
+  if (!select) return;
+  
+  const sectorId = select.value;
+  if (!sectorId) return;
+
+  const loader = document.getElementById("sector-dashboard-loading");
+  const content = document.getElementById("sector-dashboard-content");
+  const errorContainer = document.getElementById("sector-dashboard-error");
+
+  if (loader) loader.style.display = "flex";
+  if (content) content.style.opacity = "0.5";
+
+  try {
+    const response = await fetch(`/api/dashboard/sector/${sectorId}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+
+    if (loader) loader.style.display = "none";
+    if (content) {
+      content.style.opacity = "1";
+      content.style.display = "block";
+    }
+    if (errorContainer) errorContainer.style.display = "none";
+
+    if (!data.ok) {
+      throw new Error(data.error || "Unknown error");
+    }
+
+    // Populate KPIs
+    document.getElementById("sec-kpi-total").textContent = data.counts.equipments;
+    document.getElementById("sec-kpi-ativos").textContent = data.counts.ativos;
+    document.getElementById("sec-kpi-manutencao").textContent = data.counts.manutencao;
+    document.getElementById("sec-kpi-value").textContent = data.counts.total_value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+    // Populate Recent list
+    const recentList = document.getElementById("sec-recent-list");
+    document.getElementById("sec-recent-badge").textContent = `${data.equipments.length} itens`;
+    recentList.innerHTML = "";
+
+    const recentItems = data.equipments.slice(0, 5);
+    if (recentItems.length === 0) {
+      recentList.innerHTML = `
+        <div style="padding: 40px 20px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; justify-content: center; width: 100%;">
+          <div style="background: var(--bg-main); color: var(--text-muted); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+          </div>
+          <div>
+            <h4 style="margin: 0; font-size: 0.95rem; color: var(--text-main); font-weight: 700;">Nenhum Equipamento</h4>
+            <p style="margin: 4px 0 0; font-size: 0.8rem; color: var(--text-muted);">Não há itens vinculados a este setor no momento.</p>
+          </div>
+        </div>
+      `;
+    } else {
+      recentItems.forEach(eq => {
+        let badgeClass = "badge-success";
+        if (eq.status === "Manutenção") badgeClass = "badge-warning";
+        if (eq.status === "Baixado") badgeClass = "badge-danger";
+
+        recentList.innerHTML += `
+          <div class="recent-item">
+            <div class="recent-item-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            </div>
+            <div class="recent-item-info">
+              <div class="recent-item-name">${eq.name}</div>
+              <div class="recent-item-meta">
+                <span>${eq.barcode_pat}</span>
+                <span>• ${eq.brand}</span>
+              </div>
+            </div>
+            <div class="recent-item-right">
+              <span class="badge ${badgeClass}" style="font-size:0.65rem;">${eq.status}</span>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    // Populate Table
+    const tableBody = document.getElementById("sec-table-body");
+    tableBody.innerHTML = "";
+
+    if (data.equipments.length === 0) {
+      tableBody.innerHTML = `
+        <tr>
+          <td colspan="5" style="padding: 0;">
+            <div style="padding: 40px 20px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; justify-content: center; width: 100%;">
+              <div style="background: var(--bg-main); color: var(--text-muted); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border);">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+              </div>
+              <div>
+                <h4 style="margin: 0; font-size: 0.95rem; color: var(--text-main); font-weight: 700;">Nenhum Equipamento</h4>
+                <p style="margin: 4px 0 0; font-size: 0.8rem; color: var(--text-muted);">Não há itens cadastrados neste setor.</p>
+              </div>
+            </div>
+          </td>
+        </tr>
+      `;
+    } else {
+      data.equipments.forEach(eq => {
+        let badgeClass = "badge-success";
+        if (eq.status === "Manutenção") badgeClass = "badge-warning";
+        if (eq.status === "Baixado") badgeClass = "badge-danger";
+
+        const valFormatted = eq.value !== null 
+          ? eq.value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+          : "-";
+
+        tableBody.innerHTML += `
+          <tr>
+            <td style="padding: 10px 14px;">
+              <b>${eq.name}</b><br>
+              <span class="muted small">${eq.brand}</span>
+            </td>
+            <td style="padding: 10px 14px;">${eq.location_name}</td>
+            <td class="muted" style="padding: 10px 14px;">${eq.barcode_pat}</td>
+            <td class="muted" style="padding: 10px 14px;">${valFormatted}</td>
+            <td style="padding: 10px 14px; text-align:center;">
+              <span class="badge ${badgeClass}" style="font-size:0.65rem;">${eq.status}</span>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+  } catch(err) {
+    if (loader) loader.style.display = "none";
+    if (content) {
+      content.style.opacity = "1";
+      content.style.display = "none";
+    }
+    if (errorContainer) errorContainer.style.display = "block";
+    console.error("Failed to load sector dashboard metrics:", err);
+  }
+}
+</script>
 
 {% endblock %}

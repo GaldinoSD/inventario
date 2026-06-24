@@ -2,12 +2,14 @@
 <html lang="pt-br" data-theme="dark">
 <head>
   <meta charset="utf-8">
+  <link rel="shortcut icon" href="{{ url_for('static', filename='imo.ico') }}" type="image/x-icon">
+  <link rel="icon" href="{{ url_for('static', filename='imo.ico') }}" type="image/x-icon">
   <title>Login — Inventário</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Página de login para o sistema de controle de inventário.">
   <meta property="og:title" content="Login — Inventário">
   <meta property="og:description" content="Página de login para o sistema de controle de inventário.">
-  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}?v=1.0.5">
 </head>
 
 <body class="app" style="
@@ -16,11 +18,13 @@
   align-items:center;
   justify-content:center;
   position:relative;
-  overflow:hidden;
+  padding:24px 16px;
+  margin:0;
+  overflow-x:hidden;
 ">
 
   <!-- FUNDO COM GLOW -->
-  <div aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;">
+  <div aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;">
     <div style="position:absolute;inset:-220px auto auto -220px;width:520px;height:520px;background:rgba(255,106,0,.16);filter:blur(80px);border-radius:999px;"></div>
     <div style="position:absolute;inset:-260px -260px auto auto;width:640px;height:640px;background:rgba(255,106,0,.08);filter:blur(90px);border-radius:999px;"></div>
     <div style="position:absolute;inset:auto -200px -240px auto;width:520px;height:520px;background:rgba(255,106,0,.10);filter:blur(90px);border-radius:999px;"></div>
@@ -29,9 +33,9 @@
   <!-- CARD LOGIN -->
   <section class="card" style="
     width:100%;
-    max-width:520px;
-    padding:32px 30px 28px;
-    border-radius:22px;
+    max-width:400px;
+    padding:24px 24px 20px;
+    border-radius:18px;
     position:relative;
     overflow:hidden;
   ">
@@ -39,29 +43,30 @@
     <!-- GLOW INTERNO -->
     <div aria-hidden="true" style="
       position:absolute;
-      inset:auto -80px -90px auto;
-      width:260px;
-      height:260px;
+      inset:auto -60px -70px auto;
+      width:200px;
+      height:200px;
       background:rgba(255,106,0,.10);
-      filter:blur(40px);
+      filter:blur(30px);
       border-radius:999px;
+      pointer-events:none;
     "></div>
 
-    <!-- LOGO (MAIOR, SEM AUMENTAR O CARD) -->
+    <!-- LOGO -->
     <div style="
       position:relative;
       display:flex;
       justify-content:center;
       align-items:center;
-      height:120px;          /* espaço travado */
-      margin-bottom:10px;
+      height:90px;
+      margin-bottom:8px;
       overflow:hidden;
     ">
       <img
         src="{{ url_for('static', filename='logo.png') }}"
         alt="Logo"
         style="
-          height:110px;       /* logo maior */
+          height:80px;
           max-width:100%;
           object-fit:contain;
           opacity:.98;
@@ -76,24 +81,24 @@
       align-items:center;
       justify-content:center;
       gap:10px;
-      margin-bottom:22px;
+      margin-bottom:18px;
     ">
       <span aria-hidden="true" style="
-        width:38px;
-        height:38px;
-        border-radius:12px;
+        width:34px;
+        height:34px;
+        border-radius:10px;
         display:grid;
         place-items:center;
         background:rgba(255,106,0,.12);
         border:1px solid rgba(255,106,0,.22);
       ">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
           <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z" stroke="rgba(255,255,255,.88)" stroke-width="2"/>
           <path d="M20 20c-1.3-3.3-4-5-8-5s-6.7 1.7-8 5" stroke="rgba(255,255,255,.88)" stroke-width="2" stroke-linecap="round"/>
         </svg>
       </span>
 
-      <div style="font-weight:900;font-size:1.15rem;letter-spacing:.2px;">
+      <div style="font-weight:900;font-size:1.1rem;letter-spacing:.2px;">
         Acesso ao Sistema
       </div>
     </div>
@@ -110,26 +115,26 @@
     {% endwith %}
 
     <!-- FORM -->
-    <form method="post" style="display:grid;gap:14px;">
+    <form method="post" style="display:grid;gap:12px;">
 
       <!-- USUÁRIO -->
       <div>
-        <label class="muted small" style="display:block;margin-bottom:6px;">Usuário</label>
+        <label class="muted small" style="display:block;margin-bottom:4px;">Usuário</label>
         <div style="position:relative;">
           <span aria-hidden="true" style="
             position:absolute;
-            left:12px;
+            left:10px;
             top:50%;
             transform:translateY(-50%);
-            width:34px;
-            height:34px;
-            border-radius:12px;
+            width:30px;
+            height:30px;
+            border-radius:8px;
             display:grid;
             place-items:center;
             background:rgba(255,255,255,.06);
             border:1px solid rgba(255,255,255,.08);
           ">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z" stroke="rgba(255,255,255,.78)" stroke-width="2"/>
               <path d="M20 20c-1.3-3.3-4-5-8-5s-6.7 1.7-8 5" stroke="rgba(255,255,255,.78)" stroke-width="2" stroke-linecap="round"/>
             </svg>
@@ -141,29 +146,29 @@
             placeholder="Digite seu usuário"
             required
             autocomplete="username"
-            style="padding-left:56px;height:46px;border-radius:14px;"
+            style="padding-left:48px !important;height:42px;border-radius:10px;"
           >
         </div>
       </div>
 
       <!-- SENHA -->
       <div>
-        <label class="muted small" style="display:block;margin-bottom:6px;">Senha</label>
+        <label class="muted small" style="display:block;margin-bottom:4px;">Senha</label>
         <div style="position:relative;">
           <span aria-hidden="true" style="
             position:absolute;
-            left:12px;
+            left:10px;
             top:50%;
             transform:translateY(-50%);
-            width:34px;
-            height:34px;
-            border-radius:12px;
+            width:30px;
+            height:30px;
+            border-radius:8px;
             display:grid;
             place-items:center;
             background:rgba(255,255,255,.06);
             border:1px solid rgba(255,255,255,.08);
           ">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <path d="M17 11h-1V8a4 4 0 0 0-8 0v3H7a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2Z" stroke="rgba(255,255,255,.78)" stroke-width="2"/>
               <path d="M9 11V8a3 3 0 0 1 6 0v3" stroke="rgba(255,255,255,.78)" stroke-width="2"/>
             </svg>
@@ -176,7 +181,7 @@
             placeholder="Digite sua senha"
             required
             autocomplete="current-password"
-            style="padding-left:56px;height:46px;border-radius:14px;"
+            style="padding-left:48px !important;height:42px;border-radius:10px;"
           >
         </div>
       </div>
@@ -186,13 +191,13 @@
         class="btn btn-orange"
         type="submit"
         style="
-          margin-top:12px;
-          height:54px;
-          border-radius:16px;
+          margin-top:8px;
+          height:44px;
+          border-radius:12px;
           font-weight:950;
-          font-size:1.05rem;
+          font-size:1rem;
           letter-spacing:.2px;
-          box-shadow:0 18px 35px rgba(0,0,0,.28);
+          box-shadow:0 12px 25px rgba(0,0,0,.24);
         "
       >
         Entrar
@@ -204,5 +209,14 @@
     </form>
   </section>
 
+  <script>
+    // Clean old session flags on the login screen
+    sessionStorage.removeItem("user_session_active");
+
+    // When the form is submitted, mark the session storage as active
+    document.querySelector("form").addEventListener("submit", () => {
+      sessionStorage.setItem("user_session_active", "true");
+    });
+  </script>
 </body>
 </html>

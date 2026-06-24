@@ -1,0 +1,17 @@
+[Unit]
+Description=Gunicorn instance to serve Inventario Flask application
+After=network.target
+
+[Service]
+# User and Group that the service will run under.
+# You can change this to your system user (e.g., ubuntu, root, etc.) if needed.
+# If running as www-data, make sure www-data has write access to backend/instance/
+User=www-data
+Group=www-data
+
+WorkingDirectory=/var/www/inventario/backend
+Environment="PATH=/var/www/inventario/venv/bin"
+ExecStart=/var/www/inventario/venv/bin/gunicorn --workers 3 --bind 127.0.0.1:5000 run:app --access-logfile /var/log/gunicorn-access.log --error-logfile /var/log/gunicorn-error.log
+
+[Install]
+WantedBy=multi-user.target

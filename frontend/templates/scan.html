@@ -6,7 +6,7 @@
   <a class="btn" href="{{ url_for('equipments.equipments_list') }}">Ver equipamentos</a>
 </div>
 
-<section style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
+<section style="display:grid;grid-template-columns:repeat(auto-fit, minmax(min(100%, 360px), 1fr));gap:12px;margin-top:12px;">
   <div class="card" style="padding:16px;">
     <h2 style="margin:0 0 10px;font-size:1.05rem;">Buscar digitando</h2>
     <form method="get" style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;">
@@ -51,7 +51,9 @@
       Permita o acesso à câmera. Ao ler o código, ele preenche e faz a busca automaticamente.
     </p>
 
-    <div id="reader" class="card" style="padding:10px;border-radius:16px;"></div>
+    <div class="card scanner-container-wrapper" style="padding:10px;border-radius:16px;">
+      <div id="reader" style="width:100%;overflow:hidden;border-radius:12px;"></div>
+    </div>
 
     <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
       <button class="btn btn-orange" type="button" onclick="startScan()">Iniciar</button>
@@ -100,65 +102,135 @@ async function startScan(){
   if(isRunning) return;
 
   const readerId = "reader";
+  const reader = document.getElementById(readerId);
+
+  if (!window.isSecureContext) {
+    if (reader) {
+      reader.innerHTML = `<div class="muted small text-center" style="padding: 20px;">
+        <p style="color: var(--danger-color, #ff4d4d); font-weight: bold; margin-bottom: 8px;">Acesso à câmera bloqueado (Conexão Insegura)</p>
+        <p style="margin-bottom: 12px; font-size: 0.95em;">O navegador exige uma conexão segura (HTTPS) para habilitar o uso da câmera.</p>
+        <a href="https://imoterraboa.solutecno.com.br" class="btn btn-orange" style="display: inline-block; padding: 8px 16px; border-radius: 8px; font-size: 0.9em; text-decoration: none;">Acessar via HTTPS Seguro</a>
+      </div>`;
+    }
+    setStatus("Erro: Conexão não segura (requer HTTPS).");
+    return;
+  }
+
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    if (reader) {
+      reader.innerHTML = `<div class="muted small text-center" style="padding: 20px;">
+        <p style="color: var(--danger-color, #ff4d4d); font-weight: bold; margin-bottom: 8px;">Câmera Indisponível</p>
+        <p style="font-size: 0.9em;">Seu navegador ou WebView atual não suporta WebRTC. Abra o link no Safari/Chrome diretamente.</p>
+      </div>`;
+    }
+    setStatus("Erro: Recursos de mídia indisponíveis.");
+    return;
+  }
+
+  if (reader) reader.innerHTML = "";
   if(!html5Qrcode){
     html5Qrcode = new Html5Qrcode(readerId);
   }
 
   try{
-    const devices = await loadCameras();
-    if(!devices.length){
-      setStatus("Nenhuma câmera encontrada.");
-      return;
-    }
-
-    // define câmera (tenta traseira)
-    if(!currentCameraId){
-      const preferred = pickBestCamera(devices);
-      currentCameraId = preferred.id;
-    }
-
     isHandling = false;
 
     // ✅ configs melhores p/ QR + barras
     const config = {
-      fps: 18,
-      qrbox: { width: 320, height: 220 }, // retangular ajuda em código de barras
-      aspectRatio: 1.7777778,
-      disableFlip: true
+      fps: 20,
+      disableFlip: true,
+      experimentalFeatures: {
+        useBarCodeDetectorIfSupported: true
+      }
     };
 
-    await html5Qrcode.start(
-      { deviceId: { exact: currentCameraId } },
-      config,
-      async (decodedText) => {
-        if(isHandling) return; // debounce
-        isHandling = true;
+    const fallbackConfig = {
+      fps: 20,
+      disableFlip: true,
+      experimentalFeatures: {
+        useBarCodeDetectorIfSupported: true
+      }
+    };
 
-        const code = String(decodedText || "").trim();
-        if(!code){
-          isHandling = false;
-          return;
+    const handleScan = async (decodedText) => {
+      if(isHandling) return; // debounce
+      isHandling = true;
+
+      const code = String(decodedText || "").trim();
+      if(!code){
+        isHandling = false;
+        return;
+      }
+
+      setStatus("Código lido: " + code);
+      await stopScan(true);
+      window.location.href = "{{ url_for('api.scan_page') }}" + "?code=" + encodeURIComponent(code);
+    };
+
+    try {
+      if (currentCameraId) {
+        await html5Qrcode.start(currentCameraId, config, handleScan, () => {});
+      } else {
+        await html5Qrcode.start({ facingMode: "environment" }, config, handleScan, () => {});
+      }
+    } catch (err) {
+      console.warn("First scan start attempt failed, trying fallback configurations:", err);
+      try {
+        const devices = await loadCameras();
+        if (devices && devices.length > 0) {
+          const back = devices.find(d => {
+            const label = (d.label || "").toLowerCase();
+            return /back|rear|environment/i.test(label) && !label.includes("ultra") && !label.includes("tele");
+          }) || devices.find(d => /back|rear|environment/i.test(d.label || ""));
+          
+          const fallbackId = back ? back.id : devices[devices.length - 1].id;
+          await html5Qrcode.start(fallbackId, fallbackConfig, handleScan, () => {});
+        } else {
+          await html5Qrcode.start({ facingMode: "environment" }, fallbackConfig, handleScan, () => {});
         }
-
-        setStatus("Código lido: " + code);
-
-        await stopScan(true);
-
-        window.location.href = "{{ url_for('api.scan_page') }}" + "?code=" + encodeURIComponent(code);
-      },
-      () => {}
-    );
+      } catch (err2) {
+        console.warn("Second scan start attempt failed, trying user camera:", err2);
+        try {
+          await html5Qrcode.start({ facingMode: "user" }, fallbackConfig, handleScan, () => {});
+        } catch (err3) {
+          console.error("All camera starts failed:", err3);
+          throw err3;
+        }
+      }
+    }
 
     isRunning = true;
+
+    // Try to get active camera ID to persist selection state
+    try {
+      const active = html5Qrcode.getActiveCamera();
+      if (active) currentCameraId = active.id;
+    } catch(e) {}
+
     setStatus("Lendo... aponte para o QR Code / código de barras.");
 
   }catch(err){
     isRunning = false;
-    setStatus("Erro ao iniciar câmera: " + err);
+    const errMsg = err.message || err.name || String(err);
+    setStatus("Erro ao iniciar câmera: " + errMsg);
+    if (reader) {
+      reader.innerHTML = `<div class="muted small text-center" style="padding: 20px;">
+        <p style="color: var(--danger-color, #ff4d4d); font-weight: bold; margin-bottom: 8px;">Erro ao abrir câmera</p>
+        <p style="font-family: monospace; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px; font-size: 0.85em; word-break: break-all; margin-bottom: 8px;">${errMsg}</p>
+        <p style="font-size: 0.9em;">Verifique se a câmera não está em uso por outro aplicativo ou se as permissões foram bloqueadas.</p>
+      </div>`;
+    }
   }
 }
 
 async function stopScan(silent){
+  // Turn off scan laser animation overlay
+  const laser = document.getElementById("scanLaserPage");
+  if (laser) laser.classList.remove("active");
+
+  const zoomContainer = document.getElementById("zoomContainerPage");
+  if (zoomContainer) zoomContainer.style.display = "none";
+
   if(!html5Qrcode || !isRunning){
     if(!silent) setStatus("");
     return;
@@ -190,8 +262,16 @@ async function switchCamera(){
     return;
   }
 
-  const idx = camerasCache.findIndex(c => c.id === currentCameraId);
-  const next = camerasCache[(idx + 1) % camerasCache.length];
+  let activeId = currentCameraId;
+  if (!activeId && html5Qrcode) {
+    try {
+      const active = html5Qrcode.getActiveCamera();
+      if (active) activeId = active.id;
+    } catch(e) {}
+  }
+
+  const idx = camerasCache.findIndex(c => c.id === activeId);
+  const next = camerasCache[idx === -1 ? 0 : (idx + 1) % camerasCache.length];
   currentCameraId = next.id;
 
   await stopScan(true);

@@ -1,52 +1,59 @@
-# Plano de Refatoração e Melhorias do Inventário
+# Levantamento Geral do Sistema e Plano de Melhorias
 
-Este plano foi criado pelo **project-planner** após a análise inicial (Phase 1) do sistema de inventário para a igreja.
-
-## 1. Visão Geral do Sistema Atual
-O projeto atual é uma aplicação monolítica em Flask + SQLite que atende aos requisitos básicos:
-- Cadastros de Localizações, Setores e Equipamentos.
-- Upload de Notas Fiscais.
-- Módulo de Almoxarifado para movimentação de estoque.
-- Leitura de código de barras (PAT) via câmera (frontend em HTML5).
-
-**Principais Problemas Encontrados:**
-1. **Segurança Crítica:** A autenticação em `app/auth.py` utiliza credenciais "hardcoded" (`admin` / `1234`). Não há tabela de usuários nem senhas com hash no banco de dados.
-2. **Manutenibilidade (God Object):** O arquivo `app/routes.py` concentra toda a lógica da aplicação (quase 900 linhas), misturando todas as entidades do sistema.
-3. **Gerenciamento do Banco de Dados:** Não há sistema de migrações estruturado configurado (ex: Alembic/Flask-Migrate), o que dificulta a evolução do esquema do banco de dados sem perda de dados.
-4. **Regras de Negócio Incompletas:** Os equipamentos não possuem um campo de **Status** claro (ex: "Ativo", "Em Manutenção", "Baixado/Doado"), o que é vital num inventário de longo prazo.
+Este documento apresenta o levantamento técnico do estado atual do sistema de inventário e propõe melhorias, com foco especial em segurança e boas práticas.
 
 ---
 
-## 2. Mudanças Propostas
+## 1. Estado Atual do Sistema (Levantamento)
 
-> [!IMPORTANT]
-> A refatoração será dividida em módulos para não quebrar funcionalidades existentes, isolando a lógica e garantindo a escalabilidade do sistema.
+O sistema de inventário está estruturado em uma arquitetura monolítica Flask no backend e HTML/CSS no frontend, utilizando SQLite como banco de dados.
 
-### Fase A: Fundação e Segurança (security-auditor & database-architect)
-- **Tabela de Usuários:** Criar o modelo `User` em `models.py` com `id`, `username`, `password_hash` e `role` (Admin, Viewer).
-- **Refatorar Autenticação:** Atualizar `auth.py` para usar `werkzeug.security.check_password_hash`. Remover as credenciais fixas no código.
-- **Migrações:** Inicializar o `Flask-Migrate` para versionar o banco de dados.
-- **Melhoria no Equipment:** Adicionar o campo `status` ao modelo `Equipment`.
-
-### Fase B: Refatoração da Arquitetura Core (backend-specialist)
-- **Blueprints:** Dividir o gigantesco `routes.py` em múltiplos arquivos dentro de `app/routes/`:
-  - `auth_routes.py`
-  - `locations_routes.py`
-  - `equipments_routes.py`
-  - `almoxarifado_routes.py`
-  - `api_routes.py`
-- **Registro no App:** Refatorar `app/__init__.py` para registrar todos os novos blueprints dinamicamente.
-
-### Fase C: UX e Polimento (frontend-specialist & test-engineer)
-- **Frontend Ajustes:** Melhorar a indicação visual do `status` do equipamento nas listas e na interface de leitura do scanner (`scan.html`).
-- **Feedback Visual:** Implementar confirmações mais robustas com JS/SweetAlert ao excluir itens.
-- **Testes Manuais/Scripts:** Criar rotina de pre-flight checks (baseado no `checklist.py`) antes de dar a refatoração como concluída.
+### 1.1. Estrutura de Arquivos e Componentes
+- **Backend (Python 3.10+, Flask, SQLite):**
+  - `backend/app/__init__.py`: Inicialização do Flask, banco de dados (SQLAlchemy + Migrate) e controle de sesões e permissões em tempo real (`before_request`).
+  - `backend/app/models.py`: Modelos de banco de dados (`User`, `Location`, `Sector`, `Equipment`, `AlmoxItem`, `Shelf`, `ShelfLevel`, etc.).
+  - `backend/app/auth.py`: Fluxo de autenticação baseado em sessão com validação do hash de senhas (`werkzeug.security`).
+  - `backend/app/routes/`: Blueprints isolados para cada módulo (`almoxarifado`, `api`, `equipments`, `locations`, `main`, `user`).
+  - `backend/instance/app.db`: Banco de dados SQLite ativo (aprox. 112 KB).
+- **Frontend (Vanilla CSS + HTML):**
+  - `frontend/templates/`: Páginas organizadas por módulo (layouts, login, listas, formulários).
+  - `frontend/static/styles.css`: Estilo customizado com suporte a modo escuro e tema "Obsidian Dark".
+- **Deploy (Nginx + Gunicorn + Systemd):**
+  - `deploy/nginx.conf`: Configuração do servidor reverso Nginx para o domínio `imoterraboa.solutecno.com.br`.
+  - `deploy/inventario.service`: Serviço Systemd rodando Gunicorn na porta 5000 com o usuário `www-data`.
+  - `deploy/setup.sh` e `deploy/setup_ssl.sh`: Scripts automatizados de instalação e setup de certificado SSL Let's Encrypt.
 
 ---
 
-## 3. Plano de Verificação
+## 2. Auditoria e Diagnóstico de Segurança
 
-### Testes a serem aplicados:
-- **Testes de Rota:** Garantir que todas as rotas (que agora estarão em blueprints diferentes) resolvam com status 200 OK e não quebrem a sessão.
-- **Validação de Login:** Testar o login falho, bem-sucedido e bloqueio de rotas para usuários não autenticados.
-- **Integração de Uploads:** Validar se upload e exclusão física das NFs (`invoice_file`) continua funcionando após separar o arquivo `equipments_routes.py`.
+Executamos o `security_scan.py` e verificamos o ambiente atual do servidor. Abaixo estão os pontos críticos e oportunidades de melhoria identificados:
+
+### 2.1. Pontos Críticos e Vulnerabilidades
+1. **Segredos Hardcoded:** A chave secreta do Flask (`SECRET_KEY`) está hardcoded no arquivo `backend/app/__init__.py` com o valor `"dev-secret-change-me"`.
+2. **Cabeçalhos de Segurança Ausentes:** O arquivo de configuração `deploy/nginx.conf` não possui cabeçalhos básicos de segurança (como `X-Frame-Options`, `X-Content-Type-Options`, `Content-Security-Policy` e `XSS-Protection`).
+3. **Falta de HTTPS Forçado como Padrão na Configuração:** Embora exista o script `setup_ssl.sh`, a configuração base de Nginx em `deploy/nginx.conf` define apenas a porta `80` (HTTP). O HTTPS só é ativado após a execução do Certbot.
+4. **Ausência de Backups Automatizados:** Não há mecanismo para gerar e rotacionar backups periódicos do banco de dados SQLite (`app.db`), o que coloca os dados do inventário em risco caso ocorra falha de hardware ou erro no servidor.
+
+---
+
+## 3. Plano de Ação Recomendado (Mudanças Propostas)
+
+Propomos a execução de melhorias de infraestrutura e código em 4 fases:
+
+### Fase 1: Segurança da Configuração e Variáveis de Ambiente
+- **Carregar SECRET_KEY do ambiente:** Modificar `backend/app/__init__.py` para carregar a chave via `os.environ.get("SECRET_KEY")` e definir um fallback seguro.
+- **Configurar Variáveis no Systemd:** Atualizar `deploy/inventario.service` para incluir variáveis de ambiente (ex: `Environment="SECRET_KEY=sua-chave-secreta-producao"`).
+
+### Fase 2: Fortalecimento do Nginx (Security Headers)
+- **Cabeçalhos HTTP no Nginx:** Adicionar cabeçalhos de proteção ao `deploy/nginx.conf`:
+  - `X-Frame-Options "SAMEORIGIN"` (evita Clickjacking)
+  - `X-Content-Type-Options "nosniff"` (evita farejamento de MIME type)
+  - `X-XSS-Protection "1; mode=block"` (filtro XSS legacy)
+  - `Referrer-Policy "strict-origin-when-cross-origin"`
+
+### Fase 3: Script de Backup do Banco de Dados
+- **Backup de Banco de Dados:** Criar um script simples em `/var/www/inventario/deploy/backup_db.sh` para copiar o banco de dados `app.db` para um diretório seguro, com compressão (.gz) e carimbo de data/hora, e agendá-lo via Cron.
+
+### Fase 4: UX - Filtragem Dinâmica de Setores por Localização
+- **Filtro no Frontend (JavaScript):** Linkar os selects de "Localização" e "Setor" no cadastro, edição e filtros de busca de equipamentos para mostrar apenas setores válidos da localização selecionada.

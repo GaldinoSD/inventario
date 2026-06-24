@@ -2,6 +2,8 @@
 <html lang="pt-br" data-theme="light">
 <head>
   <meta charset="utf-8">
+  <link rel="shortcut icon" href="{{ url_for('static', filename='imo.ico') }}" type="image/x-icon">
+  <link rel="icon" href="{{ url_for('static', filename='imo.ico') }}" type="image/x-icon">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="Sistema de Controle de Inventário da Igreja - Gerenciamento de equipamentos e almoxarifado.">
   <meta property="og:title" content="Sistema de Inventário">
@@ -14,7 +16,16 @@
     document.documentElement.setAttribute('data-theme', savedTheme);
   </script>
 
-  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <!-- Session Lifetime/Close Enforcer -->
+  <script>
+    {% if session.get('user_logged') %}
+      if (!sessionStorage.getItem("user_session_active")) {
+        window.location.href = "{{ url_for('auth.logout') }}";
+      }
+    {% endif %}
+  </script>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}?v=1.1.1">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -31,13 +42,9 @@
     <aside class="sidebar" id="sidebar">
       <!-- BRAND / LOGO -->
       <div class="sidebar-header">
-        <div class="brand-wrapper">
-          <div class="brand-icon">
+        <div class="brand-wrapper" style="justify-content: center; width: 100%;">
+          <div class="brand-icon" style="width: 52px; height: 52px;">
             <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" style="width:100%;height:100%;object-fit:contain;border-radius:inherit;">
-          </div>
-          <div class="brand-text">
-            <span class="brand-title">Inventário</span>
-            <span class="brand-subtitle">IMO Workspace</span>
           </div>
         </div>
       </div>
@@ -178,11 +185,15 @@
                     position: "right",
                     stopOnFocus: true, 
                     style: {
-                      background: "{{ 'linear-gradient(135deg, #FF6A00, #FF8C42)' if category == 'success' else 'linear-gradient(135deg, #ef4444, #f87171)' }}",
-                      borderRadius: "12px",
+                      background: "var(--bg-surface)",
+                      color: "var(--text-main)",
+                      border: "1px solid var(--border)",
+                      borderLeft: "4px solid {{ '#FF6A00' if category == 'success' else '#ef4444' }}",
+                      borderRadius: "8px",
                       fontFamily: "'Inter', sans-serif",
                       fontWeight: "600",
-                      boxShadow: "0 10px 25px rgba(0,0,0,0.3)"
+                      fontSize: "0.85rem",
+                      boxShadow: "var(--shadow-md)"
                     }
                   }).showToast();
                 {% endfor %}
@@ -207,11 +218,16 @@
           <div id="scanTitle" style="font-weight:900;">Pesquisar por câmera</div>
           <div class="muted small">Aponte para o QR Code / Código de barras</div>
         </div>
-        <button class="btn" type="button" onclick="closeScanModal()">Fechar</button>
+        <button class="btn-close" type="button" onclick="closeScanModal()" aria-label="Fechar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
       </div>
 
       <div class="modal-body">
-        <div class="card" style="padding:12px;">
+        <div class="card scanner-container-wrapper" style="padding:12px;">
           <div id="qr-reader" style="width:100%;max-height:60vh;overflow:hidden;border-radius:12px;"></div>
           <div id="scanHint" class="muted small" style="margin-top:10px;">
             Se não aparecer a câmera, autorize nas permissões do navegador.
@@ -239,30 +255,96 @@
           <div id="productTitle" style="font-weight:900;">Produto</div>
           <div class="muted small" id="productSubtitle">Detalhes do equipamento</div>
         </div>
-        <button class="btn" type="button" onclick="closeProductModal()">Fechar</button>
+        <button class="btn-close" type="button" onclick="closeProductModal()" aria-label="Fechar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
       </div>
 
-      <div class="modal-body">
-        <div class="card" style="padding:14px; display:grid; gap:10px;">
-          <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            <span class="badge" id="pm_code">PAT/Código: -</span>
-            <span class="badge" id="pm_sector">Setor: -</span>
-            <span class="badge" id="pm_location">Local: -</span>
-            <span class="badge" id="pm_status">Status: -</span>
+      <div class="modal-body" style="padding: 24px; gap: 20px;">
+        <!-- Seção: Equipamento Encontrado -->
+        <div id="pm_found_content" style="display: none; gap: 20px; flex-direction: column;">
+          
+          <!-- Hero Section: Nome & Código -->
+          <div style="background: var(--bg-main); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 18px; display: flex; flex-direction: column; gap: 8px; position: relative; overflow: hidden;">
+            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--orange);"></div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding-left: 6px;">
+              <div style="font-size: 1.2rem; font-weight: 800; color: var(--text-main); line-height: 1.25;" id="pm_name">Nome do Equipamento</div>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center; padding-left: 6px; flex-wrap: wrap; margin-top: 4px;">
+              <span class="badge" id="pm_code" style="font-family: monospace; font-size: 0.8rem; padding: 3px 8px;">PAT: -</span>
+              <span class="badge badge-success" id="pm_status_badge">Ativo</span>
+            </div>
           </div>
 
-          <div style="display:grid; gap:6px;">
-            <div style="font-weight:900; font-size:1.05rem;" id="pm_name">Nome: -</div>
-            <div class="muted small" id="pm_brand">Marca: -</div>
-            <div class="muted small" id="pm_nf">NF: -</div>
-            <div class="muted small" id="pm_value">Valor: -</div>
+          <!-- Grade de Informações Técnicas -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Setor</span>
+              <span id="pm_sector" style="font-weight: 600; color: var(--text-main); font-size: 0.95rem;">-</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Local</span>
+              <span id="pm_location" style="font-weight: 600; color: var(--text-main); font-size: 0.95rem;">-</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Marca</span>
+              <span id="pm_brand" style="font-weight: 600; color: var(--text-main); font-size: 0.95rem;">-</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Nota Fiscal</span>
+              <span id="pm_nf" style="font-weight: 600; color: var(--text-main); font-size: 0.95rem;">-</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 4px; grid-column: span 2;">
+              <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Valor</span>
+              <span id="pm_value" style="font-size: 1.1rem; font-weight: 800; color: var(--orange);">-</span>
+            </div>
           </div>
+
+          <!-- Controle de Mudança de Status Dinâmico -->
+          <div style="border-top: 1px solid var(--border); padding-top: 16px; margin-top: 4px; display: flex; flex-direction: column; gap: 8px;">
+            <label for="pm_status_select" style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;">Alterar Status</label>
+            <div style="position: relative; display: flex; align-items: center; width: 100%;">
+              <select id="pm_status_select" class="input" style="width: 100%; padding-right: 40px; font-weight: 600;" onchange="updateEquipmentStatusAsync()">
+                <option value="Ativo">Ativo</option>
+                <option value="Manutenção">Manutenção</option>
+                <option value="Baixado">Baixado</option>
+              </select>
+              <div id="pm_status_loader" style="display: none; position: absolute; right: 12px; align-items: center; justify-content: center;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" style="animation: spin 1s linear infinite; color: var(--orange);">
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+
         </div>
 
-        <div class="modal-actions" style="margin-top:12px;">
-          <a class="btn" id="pm_open" href="{{ url_for('equipments.equipments_list') }}">Abrir na lista</a>
-          <button class="btn btn-orange" type="button" onclick="scanAgain()">Escanear outro</button>
+        <!-- Seção: Equipamento Não Encontrado -->
+        <div id="pm_not_found_content" style="display: none; text-align: center; padding: 10px 0; flex-direction: column; align-items: center; gap: 12px;">
+          <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #ef4444; margin-bottom: 4px;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+          </div>
+          <div style="font-size: 1.15rem; font-weight: 800; color: var(--text-main);" id="pm_nf_title">Não Encontrado</div>
+          <div style="color: var(--text-muted); font-size: 0.9rem;" id="pm_nf_desc">Nenhum equipamento cadastrado com esse PAT/Código</div>
+          <div style="background: var(--bg-main); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 16px; font-family: monospace; font-size: 0.95rem; font-weight: bold; margin: 6px 0; color: var(--text-main);" id="pm_nf_code">
+            PAT: -
+          </div>
+          <div id="pm_nf_action_text" style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
+            Deseja cadastrar um novo equipamento com este código?
+          </div>
         </div>
+      </div>
+
+      <div class="modal-actions" style="margin-top:0;">
+        <button class="btn" id="pm_btn_scan_again" type="button" onclick="scanAgain()">Escanear outro</button>
+        <button class="btn btn-orange" id="pm_btn_primary" type="button" onclick="closeProductModal()">Fechar</button>
       </div>
     </div>
   </div>
@@ -311,6 +393,8 @@
     // ===================== QR SCANNER =====================
     let html5QrCode = null;
     let scannerRunning = false;
+    let baseActiveCameraId = null;
+    let baseCamerasCache = [];
 
     function openScanModal(){
       const modal = document.getElementById('scanModal');
@@ -330,27 +414,92 @@
       const el = document.getElementById("qr-reader");
       if (!el) return;
 
+      if (!window.isSecureContext) {
+        el.innerHTML = `<div class="muted small text-center" style="padding: 20px;">
+          <p style="color: var(--danger-color, #ff4d4d); font-weight: bold; margin-bottom: 8px;">Acesso à câmera bloqueado (Conexão Insegura)</p>
+          <p style="margin-bottom: 12px; font-size: 0.95em;">O navegador exige uma conexão segura (HTTPS) para habilitar o uso da câmera.</p>
+          <a href="https://imoterraboa.solutecno.com.br" class="btn btn-orange" style="display: inline-block; padding: 8px 16px; border-radius: 8px; font-size: 0.9em; text-decoration: none;">Acessar via HTTPS Seguro</a>
+        </div>`;
+        return;
+      }
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        el.innerHTML = `<div class="muted small text-center" style="padding: 20px;">
+          <p style="color: var(--danger-color, #ff4d4d); font-weight: bold; margin-bottom: 8px;">Câmera Indisponível</p>
+          <p style="font-size: 0.9em;">Seu navegador ou WebView atual (ex: Instagram, WhatsApp) não suporta WebRTC. Por favor, abra o link diretamente no navegador padrão do dispositivo (Safari ou Chrome).</p>
+        </div>`;
+        return;
+      }
+
       el.innerHTML = "";
       html5QrCode = new Html5Qrcode("qr-reader");
 
       try{
         scannerRunning = true;
 
-        await html5QrCode.start(
-          { facingMode: "environment" },
-          {
-            fps: 12,
-            qrbox: { width: 220, height: 220 },
-            aspectRatio: 1.7777778,
-            disableFlip: true
-          },
-          (decodedText) => handleScanResult(decodedText),
-          () => {}
-        );
+        const config = {
+          fps: 20,
+          disableFlip: true,
+          experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true
+          }
+        };
+
+        const fallbackConfig = {
+          fps: 20,
+          disableFlip: true,
+          experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true
+          }
+        };
+
+        const successCallback = (decodedText) => handleScanResult(decodedText);
+        const errorCallback = () => {};
+
+        try {
+          if (baseActiveCameraId) {
+            // Se o usuário selecionou uma câmera específica (troca de câmera), inicia por ID
+            await html5QrCode.start(baseActiveCameraId, config, successCallback, errorCallback);
+          } else {
+            // Caso contrário, inicia com facingMode genérico para obter a câmera nativa com foco correto
+            await html5QrCode.start({ facingMode: "environment" }, config, successCallback, errorCallback);
+          }
+        } catch (err) {
+          console.warn("First scan start attempt failed, trying fallback configurations:", err);
+          try {
+            // Fallback: obtém lista de câmeras se falhar a seleção nativa
+            const devices = await Html5Qrcode.getCameras();
+            if (devices && devices.length > 0) {
+              const back = devices.find(d => {
+                const label = (d.label || "").toLowerCase();
+                return /back|rear|environment/i.test(label) && !label.includes("ultra") && !label.includes("tele");
+              }) || devices.find(d => /back|rear|environment/i.test(d.label || ""));
+              
+              const fallbackId = back ? back.id : devices[devices.length - 1].id;
+              await html5QrCode.start(fallbackId, fallbackConfig, successCallback, errorCallback);
+            } else {
+              await html5QrCode.start({ facingMode: "environment" }, fallbackConfig, successCallback, errorCallback);
+            }
+          } catch (err2) {
+            console.warn("Second scan start attempt failed, trying user camera:", err2);
+            try {
+              await html5QrCode.start({ facingMode: "user" }, fallbackConfig, successCallback, errorCallback);
+            } catch (err3) {
+              console.error("All camera starts failed:", err3);
+              throw err3;
+            }
+          }
+        }
+
       }catch(err){
         scannerRunning = false;
+        const errMsg = err.message || err.name || String(err);
         document.getElementById("qr-reader").innerHTML =
-          `<div class="muted small">Não foi possível abrir a câmera. Verifique permissões do navegador e tente novamente.</div>`;
+          `<div class="muted small text-center" style="padding: 20px;">
+            <p style="color: var(--danger-color, #ff4d4d); font-weight: bold; margin-bottom: 8px;">Erro ao abrir câmera</p>
+            <p style="font-family: monospace; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px; font-size: 0.85em; word-break: break-all; margin-bottom: 8px;">${errMsg}</p>
+            <p style="font-size: 0.9em;">Verifique se a câmera não está em uso por outro aplicativo ou se as permissões foram bloqueadas.</p>
+          </div>`;
       }
     }
 
@@ -418,8 +567,33 @@
       }
     }
 
+    let currentScannedEquipmentId = null;
+
+    function showToast(message, isSuccess = true) {
+      Toastify({
+        text: message,
+        duration: 4000,
+        close: true,
+        gravity: "top",
+        position: "right",
+        stopOnFocus: true,
+        style: {
+          background: "var(--bg-surface)",
+          color: "var(--text-main)",
+          border: "1px solid var(--border)",
+          borderLeft: "4px solid " + (isSuccess ? "#FF6A00" : "#ef4444"),
+          borderRadius: "8px",
+          fontFamily: "'Inter', sans-serif",
+          fontWeight: "600",
+          fontSize: "0.85rem",
+          boxShadow: "var(--shadow-md)"
+        }
+      }).showToast();
+    }
+
     async function handleScanResult(text){
       await stopScanner();
+      currentScannedEquipmentId = null;
 
       try{
         const res = await fetch(`/api/equipment/by-barcode?code=${encodeURIComponent(text)}`, {
@@ -443,30 +617,46 @@
         }
 
         const eq = data.equipment || {};
+        currentScannedEquipmentId = eq.id;
 
         document.getElementById("productTitle").textContent = "Equipamento encontrado";
         document.getElementById("productSubtitle").textContent = "Informações do cadastro";
 
-        document.getElementById("pm_code").textContent = `PAT/Código: ${eq.barcode_pat || "-"}`;
-        document.getElementById("pm_sector").textContent = `Setor: ${eq.sector || "-"}`;
-        document.getElementById("pm_location").textContent = `Local: ${eq.location || "-"}`;
-        
-        let status_badge_class = "badge-success";
-        if (eq.status === "Manutenção") status_badge_class = "badge-warning";
-        if (eq.status === "Baixado") status_badge_class = "badge-danger";
-        
-        const statusEl = document.getElementById("pm_status");
-        statusEl.textContent = `Status: ${eq.status || "Ativo"}`;
-        statusEl.className = `badge ${status_badge_class}`;
+        // Exibir conteúdo encontrado e ocultar não encontrado
+        document.getElementById("pm_found_content").style.display = "flex";
+        document.getElementById("pm_not_found_content").style.display = "none";
 
-        document.getElementById("pm_name").textContent = eq.name ? eq.name : "Nome: -";
-        document.getElementById("pm_brand").textContent = `Marca: ${eq.brand || "-"}`;
-        document.getElementById("pm_nf").textContent = `NF: ${eq.invoice_nf || "-"}`;
-        document.getElementById("pm_value").textContent = `Valor: ${formatBRL(eq.value)}`;
+        // Preencher dados
+        document.getElementById("pm_code").textContent = `PAT: ${eq.barcode_pat || text}`;
+        document.getElementById("pm_sector").textContent = eq.sector || "-";
+        document.getElementById("pm_location").textContent = eq.location || "-";
+        
+        // Configurar badge de status
+        const badge = document.getElementById("pm_status_badge");
+        badge.textContent = eq.status || "Ativo";
+        badge.className = "badge";
+        if (eq.status === "Manutenção") {
+          badge.classList.add("badge-warning");
+        } else if (eq.status === "Baixado") {
+          badge.classList.add("badge-danger");
+        } else {
+          badge.classList.add("badge-success");
+        }
 
-        const url = new URL("{{ url_for('equipments.equipments_list') }}", window.location.origin);
-        url.searchParams.set("q", eq.barcode_pat || text);
-        document.getElementById("pm_open").href = url.toString();
+        // Configurar dropdown de status
+        const select = document.getElementById("pm_status_select");
+        select.value = eq.status || "Ativo";
+
+        document.getElementById("pm_name").textContent = eq.name || "-";
+        document.getElementById("pm_brand").textContent = eq.brand || "-";
+        document.getElementById("pm_nf").textContent = eq.invoice_nf || "-";
+        document.getElementById("pm_value").textContent = formatBRL(eq.value);
+
+        // Configurar ações do modal
+        const primaryBtn = document.getElementById("pm_btn_primary");
+        primaryBtn.textContent = "Fechar";
+        primaryBtn.className = "btn btn-orange";
+        primaryBtn.onclick = closeProductModal;
 
         openProductModal();
 
@@ -479,29 +669,102 @@
     }
 
     function fillProductNotFound(code, isError){
-      document.getElementById("productTitle").textContent = isError ? "Erro ao consultar" : "Não encontrado";
+      document.getElementById("productTitle").textContent = isError ? "Erro ao consultar" : "Não cadastrado";
       document.getElementById("productSubtitle").textContent = isError
         ? "Falha ao consultar o cadastro"
+        : "Nenhum equipamento cadastrado";
+
+      // Exibir conteúdo de não encontrado e ocultar encontrado
+      document.getElementById("pm_found_content").style.display = "none";
+      document.getElementById("pm_not_found_content").style.display = "flex";
+
+      document.getElementById("pm_nf_title").textContent = isError ? "Erro ao consultar" : "Não Encontrado";
+      document.getElementById("pm_nf_desc").textContent = isError
+        ? "Não foi possível carregar as informações."
         : "Nenhum equipamento cadastrado com esse PAT/Código";
+      document.getElementById("pm_nf_code").textContent = `PAT: ${code}`;
+      document.getElementById("pm_nf_action_text").style.display = isError ? "none" : "block";
 
-      document.getElementById("pm_code").textContent = `PAT/Código: ${code}`;
-      document.getElementById("pm_sector").textContent = `Setor: -`;
-      document.getElementById("pm_location").textContent = `Local: -`;
+      // Configurar ações do modal
+      const primaryBtn = document.getElementById("pm_btn_primary");
+      if (isError) {
+        primaryBtn.textContent = "Fechar";
+        primaryBtn.className = "btn btn-orange";
+        primaryBtn.onclick = closeProductModal;
+      } else {
+        primaryBtn.textContent = "Cadastrar Equipamento";
+        primaryBtn.className = "btn btn-orange";
+        primaryBtn.onclick = () => registerNotFoundEquipment(code);
+      }
+    }
 
-      document.getElementById("pm_name").textContent = isError ? "Tente novamente." : "Você pode cadastrar este item.";
-      document.getElementById("pm_brand").textContent = "Marca: -";
-      document.getElementById("pm_nf").textContent = "NF: -";
-      document.getElementById("pm_value").textContent = "Valor: -";
+    function registerNotFoundEquipment(code) {
+      closeProductModal();
+      if (typeof fillPatAndOpenNewEquipment === "function") {
+        fillPatAndOpenNewEquipment(code);
+      } else {
+        window.location.href = `/equipments?new_pat=${encodeURIComponent(code)}`;
+      }
+    }
 
-      const url = new URL("{{ url_for('equipments.equipments_list') }}", window.location.origin);
-      url.searchParams.set("q", code);
-      document.getElementById("pm_open").href = url.toString();
+    async function updateEquipmentStatusAsync() {
+      if (!currentScannedEquipmentId) return;
+
+      const select = document.getElementById("pm_status_select");
+      const loader = document.getElementById("pm_status_loader");
+      const badge = document.getElementById("pm_status_badge");
+      
+      const newStatus = select.value;
+      
+      // Exibir loader e desabilitar select temporariamente
+      loader.style.display = "flex";
+      select.disabled = true;
+
+      try {
+        const response = await fetch(`/api/equipment/${currentScannedEquipmentId}/status`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+          },
+          body: JSON.stringify({ status: newStatus })
+        });
+        
+        const data = await response.json();
+        
+        if (data.ok) {
+          showToast("Status atualizado para " + newStatus + " com sucesso!", true);
+          
+          // Atualizar o badge de status
+          badge.textContent = newStatus;
+          badge.className = "badge";
+          if (newStatus === "Manutenção") {
+            badge.classList.add("badge-warning");
+          } else if (newStatus === "Baixado") {
+            badge.classList.add("badge-danger");
+          } else {
+            badge.classList.add("badge-success");
+          }
+        } else {
+          showToast("Erro ao atualizar status: " + (data.error || "Erro desconhecido"), false);
+          // Reverter valor do select para o valor do badge
+          select.value = badge.textContent;
+        }
+      } catch (err) {
+        showToast("Erro de rede ao atualizar status.", false);
+        // Reverter valor do select
+        select.value = badge.textContent;
+      } finally {
+        loader.style.display = "none";
+        select.disabled = false;
+      }
     }
 
     async function scanAgain(){
       await closeProductModal();
       openScanModal();
     }
+
   </script>
 
 </body>

@@ -22,7 +22,6 @@
       <thead>
         <tr>
           <th>Usuário</th>
-          <th>Permissões Ativas</th>
           <th>Criado Em</th>
           <th style="text-align: right; padding-right: 24px;">Ações</th>
         </tr>
@@ -41,31 +40,7 @@
               </div>
             </div>
           </td>
-          <td>
-            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-              {% if u.can_view_dashboard %}
-                <span class="badge badge-success" style="font-size: 0.65rem;">Dashboard</span>
-              {% else %}
-                <span class="badge" style="font-size: 0.65rem; border-color: var(--border); background: transparent; color: var(--text-muted);">Dashboard</span>
-              {% endif %}
 
-              {% if u.can_manage_locations %}
-                <span class="badge badge-success" style="font-size: 0.65rem;">Localizações</span>
-              {% endif %}
-
-              {% if u.can_manage_equipments %}
-                <span class="badge badge-success" style="font-size: 0.65rem;">Equipamentos</span>
-              {% endif %}
-
-              {% if u.can_manage_almoxarifado %}
-                <span class="badge badge-success" style="font-size: 0.65rem;">Almoxarifado</span>
-              {% endif %}
-
-              {% if u.can_manage_users %}
-                <span class="badge badge-success" style="font-size: 0.65rem; border-color: rgba(255, 106, 0, 0.4); color: var(--orange);">Usuários</span>
-              {% endif %}
-            </div>
-          </td>
           <td class="muted small">
             {{ u.created_at.strftime('%d/%m/%Y %H:%M') }}
           </td>

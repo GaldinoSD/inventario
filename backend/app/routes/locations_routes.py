@@ -9,29 +9,17 @@ bp = Blueprint("locations", __name__)
 @bp.get("/cadastro-localizacao", endpoint="locations_sectors")
 @login_required
 def locations_sectors():
-    q_loc = (request.args.get("q_loc") or "").strip()
     location_id = (request.args.get("location_id") or "").strip()
-
     selected_location_id = int(location_id) if location_id.isdigit() else None
 
     locations_all = Location.query.order_by(Location.name.asc()).all()
-
-    loc_query = Location.query
-    if q_loc:
-        loc_query = loc_query.filter(Location.name.ilike(f"%{q_loc}%"))
-    if selected_location_id:
-        loc_query = loc_query.filter(Location.id == selected_location_id)
-
-    locations_filtered = loc_query.order_by(Location.name.asc()).all()
     selected_location = Location.query.get(selected_location_id) if selected_location_id else None
 
     return render_template(
         "locations_sectors.html",
         locations=locations_all,
-        locations_filtered=locations_filtered,
         selected_location_id=selected_location_id,
         selected_location=selected_location,
-        q_loc=q_loc,
     )
 
 @bp.post("/cadastro-localizacao/sector", endpoint="unified_sector_create")
@@ -58,7 +46,7 @@ def unified_sector_create():
         db.session.rollback()
         flash("Já existe um setor com esse nome nessa localização.", "error")
 
-    return redirect(url_for("locations.locations_sectors"))
+    return redirect(url_for("locations.locations_sectors", location_id=location_id))
 
 @bp.post("/cadastro-localizacao/sector/<int:sector_id>", endpoint="unified_sector_update")
 @login_required
@@ -86,7 +74,7 @@ def unified_sector_update(sector_id):
         db.session.rollback()
         flash("Não foi possível atualizar: setor duplicado nessa localização.", "error")
 
-    return redirect(url_for("locations.locations_sectors"))
+    return redirect(url_for("locations.locations_sectors", location_id=location_id))
 
 @bp.post("/cadastro-localizacao/sector/<int:sector_id>/delete", endpoint="unified_sector_delete")
 @login_required
@@ -101,7 +89,7 @@ def unified_sector_delete(sector_id):
     db.session.delete(sector)
     db.session.commit()
     flash("Setor excluído.", "success")
-    return redirect(url_for("locations.locations_sectors"))
+    return redirect(url_for("locations.locations_sectors", location_id=loc_id))
 
 @bp.get("/locations")
 @login_required
@@ -129,7 +117,7 @@ def locations_create():
     try:
         db.session.commit()
         flash("Localização cadastrada com sucesso.", "success")
-        return redirect(url_for("locations.locations_sectors"))
+        return redirect(url_for("locations.locations_sectors", location_id=loc.id))
     except IntegrityError:
         db.session.rollback()
         flash("Já existe uma localização com esse nome.", "error")
@@ -164,7 +152,7 @@ def locations_update(location_id):
         db.session.rollback()
         flash("Já existe uma localização com esse nome.", "error")
 
-    return redirect(url_for("locations.locations_sectors"))
+    return redirect(url_for("locations.locations_sectors", location_id=location_id))
 
 @bp.post("/locations/<int:location_id>/delete")
 @login_required

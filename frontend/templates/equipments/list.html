@@ -44,7 +44,8 @@
 </form>
 
 <div class="card" style="padding:0;margin-top:12px;overflow:hidden;">
-  <table class="table">
+  <div class="table-wrap">
+    <table class="table">
     <thead>
       <tr>
         <th>Equipamento</th>
@@ -89,7 +90,7 @@
 
           <td class="muted">
             {% if e.value is not none %}
-              R$ {{ "%.2f"|format(e.value) }}
+              R$ {{ "{:,.2f}".format(e.value)|replace(",", "X")|replace(".", ",")|replace("X", ".") }}
             {% else %}
               -
             {% endif %}
@@ -128,6 +129,7 @@
       {% endif %}
     </tbody>
   </table>
+  </div>
 </div>
 
 <!-- ======================================================
@@ -198,7 +200,7 @@
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
         <div>
           <label class="muted small">Valor (R$)</label>
-          <input class="input" name="value" placeholder="Ex.: 1500,00">
+          <input id="new_value" class="input" name="value" placeholder="Ex.: 1500,00">
         </div>
         <div>
           <label class="muted small">NF</label>
@@ -207,6 +209,7 @@
         <div>
           <label class="muted small">PAT / Código de barras *</label>
           <input id="new_barcode_pat" class="input" name="barcode_pat" placeholder="Ex.: 7890001234567" required>
+          <div id="new_barcode_warning" class="muted small" style="color:var(--danger-color, #ff4d4d); margin-top:4px; display:none;">PAT já cadastrado!</div>
         </div>
       </div>
 
@@ -240,7 +243,7 @@
       </div>
 
       <div class="modal-actions">
-        <button class="btn btn-orange" type="submit">Salvar</button>
+        <button id="new_submit_btn" class="btn btn-orange" type="submit">Salvar</button>
         <button class="btn" type="button" onclick="closeModal('modalEquipmentNew')">Cancelar</button>
       </div>
 
@@ -299,6 +302,7 @@
         <div>
           <label class="muted small">PAT / Código de barras *</label>
           <input id="edit_barcode_pat" class="input" name="barcode_pat" required>
+          <div id="edit_barcode_warning" class="muted small" style="color:var(--danger-color, #ff4d4d); margin-top:4px; display:none;">PAT já cadastrado!</div>
         </div>
       </div>
 
@@ -322,6 +326,7 @@
         <div>
           <label class="muted small">Setor *</label>
           <select id="edit_sector_id" name="sector_id" required>
+            <option value="" disabled selected>Selecione...</option>
             {% for s in sectors %}
               <option value="{{ s.id }}">{{ s.name }}</option>
             {% endfor %}
@@ -330,7 +335,7 @@
       </div>
 
       <div class="modal-actions">
-        <button class="btn btn-orange" type="submit">Salvar alterações</button>
+        <button id="edit_submit_btn" class="btn btn-orange" type="submit">Salvar alterações</button>
         <button class="btn" type="button" onclick="closeModal('modalEquipmentEdit')">Cancelar</button>
       </div>
     </form>
@@ -382,14 +387,19 @@
   <div class="modal card modal-md" role="dialog" aria-modal="true" aria-labelledby="modalScanCreateTitle">
     <div class="modal-header">
       <div>
-        <div id="modalScanCreateTitle" style="font-weight:900;font-size:1.1rem;">Cadastro por câmera</div>
+        <div id="modalScanCreateTitle" style="font-weight:900;">Cadastro por câmera</div>
         <div class="muted small">Aponte para o QR Code / código de barras para preencher o PAT/Código.</div>
       </div>
-      <button class="btn" type="button" onclick="closeScanCreateModal()">Fechar</button>
+      <button class="btn-close" type="button" onclick="closeScanCreateModal()" aria-label="Fechar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
     </div>
 
-    <div class="modal-body">
-      <div class="card" style="padding:12px;border-radius:16px;">
+    <div class="modal-body" style="padding: 24px; gap: 20px;">
+      <div class="card scanner-container-wrapper" style="padding:12px;">
         <!-- ✅ limita altura do leitor pra não estourar -->
         <div id="scan-create-reader" style="width:100%;max-height:60vh;overflow:hidden;border-radius:12px;"></div>
 
@@ -398,20 +408,15 @@
         </div>
       </div>
 
-      <form class="form-grid" onsubmit="manualFillForCreate(event)">
+      <form class="form-grid" onsubmit="manualFillForCreate(event)" style="margin-top:12px;">
         <div class="field col-9">
           <label>Ou digite manualmente</label>
           <input class="input" id="scanCreateManual" placeholder="Digite o PAT/Código..." autocomplete="off">
         </div>
-        <div class="field col-3 actions">
-          <button class="btn btn-orange" type="submit">Usar código</button>
+        <div class="field col-3 actions" style="display:flex;align-items:end;">
+          <button class="btn btn-orange" type="submit" style="width:100%;">Usar código</button>
         </div>
       </form>
-
-      <div class="modal-actions">
-        <button class="btn" type="button" onclick="stopScanCreate(false)">Parar</button>
-        <button class="btn" type="button" onclick="switchScanCreateCamera()">Trocar câmera</button>
-      </div>
     </div>
   </div>
 </div>
@@ -420,6 +425,63 @@
 <script src="https://unpkg.com/html5-qrcode" defer></script>
 
 <script>
+// Array de todos os setores injetados pelo backend
+const allSectors = [
+  {% for s in sectors %}
+    { id: {{ s.id }}, name: {{ s.name|tojson }}, locationId: {{ s.location_id }} },
+  {% endfor %}
+];
+
+// Função para atualizar os setores dinamicamente com base na localização selecionada
+function updateSectors(locationSelect, sectorSelect, currentSectorId = null, isFilter = false) {
+  const selectedLocationId = locationSelect.value;
+  
+  // Salva a primeira opção ("Selecione..." ou "Todos setores")
+  const firstOption = sectorSelect.options[0];
+  sectorSelect.innerHTML = '';
+  sectorSelect.appendChild(firstOption);
+  
+  if (!selectedLocationId) {
+    if (isFilter) {
+      sectorSelect.disabled = false;
+      firstOption.textContent = "Todos setores";
+      allSectors.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.id;
+        opt.textContent = s.name;
+        if (currentSectorId && s.id == currentSectorId) {
+          opt.selected = true;
+        }
+        sectorSelect.appendChild(opt);
+      });
+    } else {
+      sectorSelect.disabled = true;
+      firstOption.textContent = "Selecione uma localização primeiro...";
+    }
+    return;
+  }
+  
+  const filtered = allSectors.filter(s => s.locationId == selectedLocationId);
+  
+  if (filtered.length === 0) {
+    firstOption.textContent = isFilter ? "Nenhum setor disponível" : "Nenhum setor cadastrado";
+    sectorSelect.disabled = !isFilter;
+  } else {
+    firstOption.textContent = isFilter ? "Todos setores" : "Selecione...";
+    sectorSelect.disabled = false;
+    
+    filtered.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.id;
+      opt.textContent = s.name;
+      if (currentSectorId && s.id == currentSectorId) {
+        opt.selected = true;
+      }
+      sectorSelect.appendChild(opt);
+    });
+  }
+}
+
 /* ==========================
    Modais (com trava do body)
 ========================== */
@@ -429,6 +491,9 @@ function openModal(id){
   el.classList.add("show");
   el.setAttribute("aria-hidden","false");
   document.body.classList.add("modal-open"); // ✅ trava scroll do fundo
+
+  // Não foca automaticamente se for o leitor de câmera para evitar abrir o teclado no celular
+  if(id === "modalScanCreate") return;
 
   const firstInput = el.querySelector("input, select, textarea");
   if(firstInput) firstInput.focus();
@@ -476,16 +541,112 @@ function openInvoicePreview(url, mime){
   openModal("modalInvoicePreview");
 }
 
+function setupBRLCurrencyMask(input) {
+  if (!input) return;
+  
+  input.addEventListener('input', function(e) {
+    let value = this.value;
+    
+    // Remove all non-digits
+    value = value.replace(/\D/g, "");
+    
+    // If empty, set empty and return
+    if (!value) {
+      this.value = "";
+      return;
+    }
+    
+    // Parse to integer and convert to float (cents division)
+    let numberVal = parseFloat(value) / 100;
+    
+    // Format to BRL locale
+    this.value = numberVal.toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  });
+}
+
+async function checkBarcodeExistence(inputEl, warningEl, submitBtnEl, currentId = null) {
+  const code = (inputEl.value || "").trim();
+  if (!code) {
+    warningEl.style.display = "none";
+    submitBtnEl.disabled = false;
+    submitBtnEl.style.opacity = "1";
+    submitBtnEl.style.cursor = "pointer";
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/equipment/by-barcode?code=${encodeURIComponent(code)}`);
+    const data = await res.json();
+    if (data.ok && data.found) {
+      if (currentId && data.equipment.id == currentId) {
+        warningEl.style.display = "none";
+        submitBtnEl.disabled = false;
+        submitBtnEl.style.opacity = "1";
+        submitBtnEl.style.cursor = "pointer";
+      } else {
+        warningEl.style.display = "block";
+        submitBtnEl.disabled = true;
+        submitBtnEl.style.opacity = ".55";
+        submitBtnEl.style.cursor = "not-allowed";
+      }
+    } else {
+      warningEl.style.display = "none";
+      submitBtnEl.disabled = false;
+      submitBtnEl.style.opacity = "1";
+      submitBtnEl.style.cursor = "pointer";
+    }
+  } catch (err) {
+    console.error("Error checking barcode:", err);
+  }
+}
+
+let barcodeTimeout = null;
+function setupBarcodeCheck(inputEl, warningEl, submitBtnEl, getCurrentIdFn = null) {
+  if (!inputEl || !warningEl || !submitBtnEl) return;
+
+  const performCheck = () => {
+    const currentId = getCurrentIdFn ? getCurrentIdFn() : null;
+    checkBarcodeExistence(inputEl, warningEl, submitBtnEl, currentId);
+  };
+
+  inputEl.addEventListener("input", () => {
+    clearTimeout(barcodeTimeout);
+    barcodeTimeout = setTimeout(performCheck, 350);
+  });
+
+  inputEl.addEventListener("blur", performCheck);
+}
+
 function openEditEquipment(btn){
   const id = btn.dataset.id;
 
   document.getElementById("edit_name").value = btn.dataset.name || "";
   document.getElementById("edit_brand").value = btn.dataset.brand || "";
-  document.getElementById("edit_value").value = btn.dataset.value || "";
+
+  const editValueInput = document.getElementById("edit_value");
+  const rawValue = btn.dataset.value || "";
+  if (rawValue) {
+    const floatVal = parseFloat(rawValue);
+    if (!isNaN(floatVal)) {
+      editValueInput.value = floatVal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    } else {
+      editValueInput.value = "";
+    }
+  } else {
+    editValueInput.value = "";
+  }
+
   document.getElementById("edit_invoice_nf").value = btn.dataset.invoice_nf || "";
   document.getElementById("edit_barcode_pat").value = btn.dataset.barcode_pat || "";
   document.getElementById("edit_location_id").value = btn.dataset.location_id || "";
-  document.getElementById("edit_sector_id").value = btn.dataset.sector_id || "";
+  
+  // Atualiza os setores no modal de edição
+  const editLocSelect = document.getElementById("edit_location_id");
+  const editSecSelect = document.getElementById("edit_sector_id");
+  updateSectors(editLocSelect, editSecSelect, btn.dataset.sector_id || "");
   
   if(document.getElementById("edit_status")) {
       document.getElementById("edit_status").value = btn.dataset.status || "Ativo";
@@ -493,6 +654,17 @@ function openEditEquipment(btn){
 
   const form = document.getElementById("editEquipmentForm");
   form.action = "{{ url_for('equipments.equipments_update', equipment_id=0) }}".replace("/0/", "/" + id + "/");
+  form.dataset.equipmentId = id;
+
+  // Reset warnings and submit buttons
+  const editWarning = document.getElementById("edit_barcode_warning");
+  const editSubmit = document.getElementById("edit_submit_btn");
+  if (editWarning) editWarning.style.display = "none";
+  if (editSubmit) {
+    editSubmit.disabled = false;
+    editSubmit.style.opacity = "1";
+    editSubmit.style.cursor = "pointer";
+  }
 
   openModal("modalEquipmentEdit");
 }
@@ -552,6 +724,25 @@ async function startScanCreate(){
   const hint = document.getElementById("scanCreateHint");
   if(!reader) return;
 
+  if (!window.isSecureContext) {
+    reader.innerHTML = `<div class="muted small text-center" style="padding: 12px;">
+      <p style="color: var(--danger-color, #ff4d4d); font-weight: bold; margin-bottom: 6px;">Acesso à câmera bloqueado (Conexão Insegura)</p>
+      <p style="margin-bottom: 10px; font-size: 0.9em;">O navegador exige HTTPS para habilitar o uso da câmera.</p>
+      <a href="https://imoterraboa.solutecno.com.br" class="btn btn-orange" style="display: inline-block; padding: 6px 12px; border-radius: 6px; font-size: 0.85em; text-decoration: none;">Acessar via HTTPS</a>
+    </div>`;
+    if(hint) hint.textContent = "Erro: Contexto não seguro.";
+    return;
+  }
+
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    reader.innerHTML = `<div class="muted small text-center" style="padding: 12px;">
+      <p style="color: var(--danger-color, #ff4d4d); font-weight: bold; margin-bottom: 6px;">Câmera Indisponível</p>
+      <p style="font-size: 0.85em; line-height: 1.3;">Seu navegador ou app interno atual não suporta WebRTC. Abra o link no Safari/Chrome diretamente.</p>
+    </div>`;
+    if(hint) hint.textContent = "Erro: Recursos de mídia indisponíveis.";
+    return;
+  }
+
   reader.innerHTML = "";
 
   scanCreateQr = new Html5Qrcode("scan-create-reader");
@@ -559,46 +750,87 @@ async function startScanCreate(){
   try{
     scanCreateHandling = false;
 
-    scanCreateCameras = await Html5Qrcode.getCameras();
-    if(!scanCreateCameras || !scanCreateCameras.length){
-      if(hint) hint.textContent = "Nenhuma câmera encontrada.";
-      return;
-    }
+    const config = {
+      fps: 20,
+      disableFlip: true,
+      experimentalFeatures: {
+        useBarCodeDetectorIfSupported: true
+      }
+    };
 
-    if(!scanCreateCameraId){
-      const back = scanCreateCameras.find(d => /back|rear|environment/i.test(d.label || ""));
-      scanCreateCameraId = (back || scanCreateCameras[0]).id;
+    const fallbackConfig = {
+      fps: 20,
+      disableFlip: true,
+      experimentalFeatures: {
+        useBarCodeDetectorIfSupported: true
+      }
+    };
+
+    const handleScanCreate = (decodedText) => {
+      if(scanCreateHandling) return;
+      scanCreateHandling = true;
+
+      const code = String(decodedText || "").trim();
+      if(!code){
+        scanCreateHandling = false;
+        return;
+      }
+      fillPatAndOpenNewEquipment(code);
+    };
+
+    try {
+      if (scanCreateCameraId) {
+        await scanCreateQr.start(scanCreateCameraId, config, handleScanCreate, () => {});
+      } else {
+        await scanCreateQr.start({ facingMode: "environment" }, config, handleScanCreate, () => {});
+      }
+    } catch (err) {
+      console.warn("Failed starting scanCreate with advanced constraints, trying fallback configurations:", err);
+      try {
+        if (!scanCreateCameras.length) {
+          scanCreateCameras = await Html5Qrcode.getCameras();
+        }
+        if (scanCreateCameras && scanCreateCameras.length > 0) {
+          const back = scanCreateCameras.find(d => {
+            const label = (d.label || "").toLowerCase();
+            return /back|rear|environment/i.test(label) && !label.includes("ultra") && !label.includes("tele");
+          }) || scanCreateCameras.find(d => /back|rear|environment/i.test(d.label || ""));
+          
+          const fallbackId = back ? back.id : scanCreateCameras[scanCreateCameras.length - 1].id;
+          await scanCreateQr.start(fallbackId, fallbackConfig, handleScanCreate, () => {});
+        } else {
+          await scanCreateQr.start({ facingMode: "environment" }, fallbackConfig, handleScanCreate, () => {});
+        }
+      } catch (err2) {
+        console.warn("Second scanCreate start attempt failed, trying user camera:", err2);
+        try {
+          await scanCreateQr.start({ facingMode: "user" }, fallbackConfig, handleScanCreate, () => {});
+        } catch (err3) {
+          console.error("All camera starts failed:", err3);
+          throw err3;
+        }
+      }
     }
 
     scanCreateRunning = true;
 
-    await scanCreateQr.start(
-      { deviceId: { exact: scanCreateCameraId } },
-      {
-        fps: 18,
-        qrbox: { width: 320, height: 220 },
-        aspectRatio: 1.7777778,
-        disableFlip: true
-      },
-      (decodedText) => {
-        if(scanCreateHandling) return;
-        scanCreateHandling = true;
-
-        const code = String(decodedText || "").trim();
-        if(!code){
-          scanCreateHandling = false;
-          return;
-        }
-        fillPatAndOpenNewEquipment(code);
-      },
-      () => {}
-    );
+    // Try to get active camera ID to persist selection state
+    try {
+      const active = scanCreateQr.getActiveCamera();
+      if (active) scanCreateCameraId = active.id;
+    } catch(e) {}
 
     if(hint) hint.textContent = "Lendo... aponte para o código.";
 
   }catch(err){
     scanCreateRunning = false;
-    if(hint) hint.textContent = "Não foi possível abrir a câmera. Verifique permissões e tente novamente.";
+    const errMsg = err.message || err.name || String(err);
+    if(hint) hint.innerHTML = `<span style="color:var(--danger-color, #ff4d4d); font-weight:bold;">Falha ao iniciar câmera:</span> <code>${errMsg}</code>`;
+    reader.innerHTML = `<div class="muted small text-center" style="padding: 12px;">
+      <p style="color: var(--danger-color, #ff4d4d); font-weight: bold; margin-bottom: 6px;">Erro de inicialização</p>
+      <p style="font-family: monospace; background: rgba(0,0,0,0.2); padding: 6px; border-radius: 4px; font-size: 0.8em; word-break: break-all; margin-bottom: 6px;">${errMsg}</p>
+      <p style="font-size: 0.85em;">Verifique se concedeu permissão ou se outra aba/app está usando a câmera.</p>
+    </div>`;
   }
 }
 
@@ -636,8 +868,16 @@ async function switchScanCreateCamera(){
     return;
   }
 
-  const idx = scanCreateCameras.findIndex(c => c.id === scanCreateCameraId);
-  const next = scanCreateCameras[(idx + 1) % scanCreateCameras.length];
+  let activeId = scanCreateCameraId;
+  if (!activeId && scanCreateQr) {
+    try {
+      const active = scanCreateQr.getActiveCamera();
+      if (active) activeId = active.id;
+    } catch(e) {}
+  }
+
+  const idx = scanCreateCameras.findIndex(c => c.id === activeId);
+  const next = scanCreateCameras[idx === -1 ? 0 : (idx + 1) % scanCreateCameras.length];
   scanCreateCameraId = next.id;
 
   await stopScanCreate(true);
@@ -699,6 +939,74 @@ document.addEventListener("click", async (e) => {
       }
     }
   }
+});
+
+// Eventos e inicialização para filtragem de setores
+document.addEventListener("DOMContentLoaded", () => {
+  // 1. Modal de Novo Equipamento
+  const newLocSelect = document.querySelector('#modalEquipmentNew select[name="location_id"]');
+  const newSecSelect = document.querySelector('#modalEquipmentNew select[name="sector_id"]');
+  
+  if (newLocSelect && newSecSelect) {
+    newSecSelect.disabled = true;
+    newSecSelect.options[0].textContent = "Selecione uma localização primeiro...";
+    
+    newLocSelect.addEventListener('change', () => {
+      updateSectors(newLocSelect, newSecSelect);
+    });
+  }
+  
+  // 2. Modal de Editar Equipamento
+  const editLocSelect = document.getElementById("edit_location_id");
+  const editSecSelect = document.getElementById("edit_sector_id");
+  
+  if (editLocSelect && editSecSelect) {
+    editLocSelect.addEventListener('change', () => {
+      updateSectors(editLocSelect, editSecSelect);
+    });
+  }
+  
+  // 3. Filtro de pesquisa da listagem principal
+  const filterLocSelect = document.querySelector('form[method="get"] select[name="location_id"]');
+  const filterSecSelect = document.querySelector('form[method="get"] select[name="sector_id"]');
+  
+  if (filterLocSelect && filterSecSelect) {
+    const initialSectorId = "{{ sector_id or '' }}";
+    updateSectors(filterLocSelect, filterSecSelect, initialSectorId, true);
+    
+    filterLocSelect.addEventListener('change', () => {
+      updateSectors(filterLocSelect, filterSecSelect, null, true);
+    });
+  }
+
+  // 4. Abertura automática do modal de cadastro via new_pat query string
+  const urlParams = new URLSearchParams(window.location.search);
+  const newPat = urlParams.get('new_pat');
+  if (newPat) {
+    fillPatAndOpenNewEquipment(newPat);
+    // Limpar o parâmetro da URL sem recarregar
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+
+  // 5. Inicialização da máscara de valor
+  const newValueInput = document.getElementById("new_value");
+  const editValueInput = document.getElementById("edit_value");
+  setupBRLCurrencyMask(newValueInput);
+  setupBRLCurrencyMask(editValueInput);
+
+  // 6. Configuração de checagem de duplicidade de PAT/Código
+  const newPatInput = document.getElementById("new_barcode_pat");
+  const newWarning = document.getElementById("new_barcode_warning");
+  const newSubmit = document.getElementById("new_submit_btn");
+  
+  const editPatInput = document.getElementById("edit_barcode_pat");
+  const editWarning = document.getElementById("edit_barcode_warning");
+  const editSubmit = document.getElementById("edit_submit_btn");
+
+  setupBarcodeCheck(newPatInput, newWarning, newSubmit);
+  setupBarcodeCheck(editPatInput, editWarning, editSubmit, () => {
+    return document.getElementById("editEquipmentForm").dataset.equipmentId;
+  });
 });
 </script>
 
